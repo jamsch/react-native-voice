@@ -1,27 +1,22 @@
-'use strict';
-import React, {
-  NativeModules,
-  NativeEventEmitter,
-  Platform,
-} from 'react-native';
+import React, { NativeModules, NativeEventEmitter, Platform } from 'react-native';
 
 const { Voice } = NativeModules;
 
 // NativeEventEmitter is only availabe on React Native platforms, so this conditional is used to avoid import conflicts in the browser/server
-const voiceEmitter = Platform.OS !== "web" ? new NativeEventEmitter(Voice) : null;
+const voiceEmitter = Platform.OS !== 'web' ? new NativeEventEmitter(Voice) : null;
 
 class RCTVoice {
   constructor() {
     this._loaded = false;
     this._listeners = null;
     this._events = {
-      'onSpeechStart': this._onSpeechStart.bind(this),
-      'onSpeechRecognized': this._onSpeechRecognized.bind(this),
-      'onSpeechEnd': this._onSpeechEnd.bind(this),
-      'onSpeechError': this._onSpeechError.bind(this),
-      'onSpeechResults': this._onSpeechResults.bind(this),
-      'onSpeechPartialResults': this._onSpeechPartialResults.bind(this),
-      'onSpeechVolumeChanged': this._onSpeechVolumeChanged.bind(this)
+      onSpeechStart: this._onSpeechStart.bind(this),
+      onSpeechRecognized: this._onSpeechRecognized.bind(this),
+      onSpeechEnd: this._onSpeechEnd.bind(this),
+      onSpeechError: this._onSpeechError.bind(this),
+      onSpeechResults: this._onSpeechResults.bind(this),
+      onSpeechPartialResults: this._onSpeechPartialResults.bind(this),
+      onSpeechVolumeChanged: this._onSpeechVolumeChanged.bind(this),
     };
   }
   removeAllListeners() {
@@ -51,32 +46,41 @@ class RCTVoice {
       });
     });
   }
-  start(locale, options = {}) {
+  start = async (locale, options = {}) => {
     if (!this._loaded && !this._listeners && voiceEmitter !== null) {
-      this._listeners = Object.keys(this._events)
-        .map((key, index) => voiceEmitter.addListener(key, this._events[key]));
+      this._listeners = Object.keys(this._events).map((key, index) => voiceEmitter.addListener(key, this._events[key]));
     }
 
-    return new Promise((resolve, reject) => {
-      const callback = (error) => {
-        if (error) {
-          reject(new Error(error));
-        } else {
-          resolve();
-        }
-      };
-      if (Platform.OS === 'android') {
-        Voice.startSpeech(locale, Object.assign({
-          EXTRA_LANGUAGE_MODEL: "LANGUAGE_MODEL_FREE_FORM",
-          EXTRA_MAX_RESULTS: 5,
-          EXTRA_PARTIAL_RESULTS: true,
-          REQUEST_PERMISSIONS_AUTO: true,
-        }, options), callback);
-      } else {
-        Voice.startSpeech(locale, callback);
-      }
-    });
-  }
+    switch (Platform.OS) {
+      case 'ios':
+        return await Voice.startSpeech(locale);
+      case 'android':
+        return new Promise((resolve, reject) => {
+          const callback = (error) => {
+            if (error) {
+              reject(new Error(error));
+            } else {
+              resolve();
+            }
+          };
+          Voice.startSpeech(
+            locale,
+            Object.assign(
+              {
+                EXTRA_LANGUAGE_MODEL: 'LANGUAGE_MODEL_FREE_FORM',
+                EXTRA_MAX_RESULTS: 5,
+                EXTRA_PARTIAL_RESULTS: true,
+                REQUEST_PERMISSIONS_AUTO: true,
+              },
+              options,
+            ),
+            callback,
+          );
+        });
+      default:
+        throw new Exception('Error: Platform not supported');
+    }
+  };
   stop() {
     if (!this._loaded && !this._listeners) {
       return Promise.resolve();
@@ -115,6 +119,16 @@ class RCTVoice {
         }
       });
     });
+  }
+  isReady() {
+    if (Platform.OS !== 'ios') return true;
+    return new Promise((resolve, reject) => {
+      Voice.isReady(isReady => resolve(isReady));
+    });
+  }
+  setCategory(category) {
+    if (Platform.OS !== 'ios') return;
+    Voice.setCategory(category);
   }
   isRecognizing() {
     return new Promise((resolve, reject) => {
