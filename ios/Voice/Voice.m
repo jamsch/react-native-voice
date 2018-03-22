@@ -6,12 +6,15 @@
 #import <Speech/Speech.h>
 
 @interface Voice () <SFSpeechRecognizerDelegate>
-
+/** Whether speech recognition is finishing.. */
+@property (nonatomic) BOOL isTearingDown;
 @property (nonatomic) SFSpeechRecognizer* speechRecognizer;
 @property (nonatomic) SFSpeechAudioBufferRecognitionRequest* recognitionRequest;
 @property (nonatomic) AVAudioEngine* audioEngine;
 @property (nonatomic) SFSpeechRecognitionTask* recognitionTask;
 @property (nonatomic) AVAudioSession* audioSession;
+/** Previous category the user was on prior to starting speech recognition */
+@property (nonatomic) NSString* priorAudioCategory;
 
 @end
 
@@ -19,7 +22,73 @@
 {
 }
 
+- (BOOL)isHeadsetPluggedIn {
+    AVAudioSessionRouteDescription* route = [[AVAudioSession sharedInstance] currentRoute];
+    for (AVAudioSessionPortDescription* desc in [route outputs]) {
+        if ([[desc portType] isEqualToString:AVAudioSessionPortHeadphones])
+            return YES;
+    }
+    return NO;
+}
+
+-(BOOL)isHeadSetBluetooth {
+    NSArray *arrayInputs = [[AVAudioSession sharedInstance] availableInputs];
+    for (AVAudioSessionPortDescription *port in arrayInputs)
+    {
+        if ([port.portType isEqualToString:AVAudioSessionPortBluetoothHFP])
+        {
+            return YES;
+        }
+    }
+    return NO;
+}
+
+/** Returns "YES" if no errors had occurred */
+-(BOOL) setupAudioSession {
+    if ([self isHeadsetPluggedIn] || [self isHeadSetBluetooth]){
+        [self.audioSession setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionAllowBluetooth error: nil];
+    }
+    else {
+        [self.audioSession setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker error: nil];
+    }
+    
+    NSError* audioSessionError = nil;
+
+    // Activate the audio session
+    [self.audioSession setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&audioSessionError];
+    
+    if (audioSessionError != nil) {
+        [self sendResult:RCTMakeError(@"[120] Unable to start speech recognition", nil, nil) :nil :nil :nil];
+        return NO;
+    }
+    
+    return YES;
+}
+
+-(void) resetAudioSession {
+    if (self.audioSession == nil) {
+        self.audioSession = [AVAudioSession sharedInstance];
+    }
+    NSString* audioCategory = [self.audioSession category];
+    // Category hasn't changed -- do nothing
+    if ([self.priorAudioCategory isEqualToString:audioCategory]) return;
+    // Reset back to the previous category
+    if ([self isHeadsetPluggedIn] || [self isHeadSetBluetooth]) {
+            [self.audioSession setCategory:self.priorAudioCategory withOptions:AVAudioSessionCategoryOptionAllowBluetooth error: nil];
+    } else {
+            [self.audioSession setCategory:self.priorAudioCategory withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker error: nil];
+    }
+    // Set audio session to inactive and notify other sessions
+    [self.audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error: nil];
+    // Remove pointer reference
+    self.audioSession = nil;
+}
+
 - (void) setupAndStartRecognizing:(NSString*)localeStr {
+    self.audioSession = [AVAudioSession sharedInstance];
+    self.priorAudioCategory = [self.audioSession category];
+    
+    // Tear down resources before starting speech recognition..
     [self teardown];
 
     NSLocale* locale = nil;
@@ -34,19 +103,17 @@
     }
 
     self.speechRecognizer.delegate = self;
-
-    NSError* audioSessionError = nil;
-    self.audioSession = [AVAudioSession sharedInstance];
-
-    if (audioSessionError != nil) {
-        [self sendResult:RCTMakeError([audioSessionError localizedDescription], nil, nil) :nil :nil :nil];
+    
+    // Start audio session...
+    if (![self setupAudioSession]) {
+        [self teardown];
         return;
     }
 
     self.recognitionRequest = [[SFSpeechAudioBufferRecognitionRequest alloc] init];
 
-    if (self.recognitionRequest == nil){
-        [self sendResult:RCTMakeError(@"Unable to created a SFSpeechAudioBufferRecognitionRequest object", nil, nil) :nil :nil :nil];
+    if (self.recognitionRequest == nil) {
+        [self sendResult:RCTMakeError(@"Unable to create a SFSpeechAudioBufferRecognitionRequest object", nil, nil) :nil :nil :nil];
         return;
     }
 
@@ -64,7 +131,8 @@
     self.recognitionRequest.shouldReportPartialResults = YES;
 
     [self sendEventWithName:@"onSpeechStart" body:@true];
-
+    
+    
     // A recognition task represents a speech recognition session.
     // We keep a reference to the task so that it can be cancelled.
     self.recognitionTask = [self.speechRecognizer recognitionTaskWithRequest:self.recognitionRequest resultHandler:^(SFSpeechRecognitionResult * _Nullable result, NSError * _Nullable error) {
@@ -94,16 +162,26 @@
 
     AVAudioFormat* recordingFormat = [inputNode outputFormatForBus:0];
 
-    [inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
-        if (self.recognitionRequest != nil) {
-            [self.recognitionRequest appendAudioPCMBuffer:buffer];
-        }
-    }];
+    // Start recording
+    @try {
+        [inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
+            if (self.recognitionRequest != nil) {
+                [self.recognitionRequest appendAudioPCMBuffer:buffer];
+            }
+        }];
+    } @catch (NSException *exception) {
+        NSString* errorText = [NSString stringWithFormat:@"[165 error] -  %@", exception.reason];
+        [self sendResult:RCTMakeError(errorText, nil, nil) :nil :nil :nil];
+        [self teardown];
+        return;
+    } @finally {}
 
     [self.audioEngine prepare];
+    NSError* audioSessionError = nil;
     [self.audioEngine startAndReturnError:&audioSessionError];
     if (audioSessionError != nil) {
         [self sendResult:RCTMakeError([audioSessionError localizedDescription], nil, nil) :nil :nil :nil];
+        [self teardown];
         return;
     }
 }
@@ -137,9 +215,12 @@
 }
 
 - (void) teardown {
+    self.isTearingDown = YES;
     [self.recognitionTask cancel];
     self.recognitionTask = nil;
-    self.audioSession = nil;
+
+    // Set back audio session category
+    [self resetAudioSession];
 
     if (self.audioEngine.isRunning) {
         [self.audioEngine stop];
@@ -148,12 +229,13 @@
     }
 
     self.recognitionRequest = nil;
+    self.isTearingDown = NO;
 }
 
 // Called when the availability of the given recognizer changes
 - (void)speechRecognizer:(SFSpeechRecognizer *)speechRecognizer availabilityDidChange:(BOOL)available {
     if (available == false) {
-        [self sendResult:RCTMakeError(@"Speech recognition is not available now", nil, nil) :nil :nil :nil];
+        [self sendResult:RCTMakeError(@"[221] Speech recognition is not available now", nil, nil) :nil :nil :nil];
     }
 }
 
@@ -185,8 +267,9 @@ RCT_EXPORT_METHOD(isSpeechAvailable:(RCTResponseSenderBlock)callback) {
         }
     }];
 }
+    
 RCT_EXPORT_METHOD(isRecognizing:(RCTResponseSenderBlock)callback) {
-    if (self.recognitionTask != nil){
+    if (self.recognitionTask != nil) {
         switch (self.recognitionTask.state) {
             case SFSpeechRecognitionTaskStateRunning:
                 callback(@[@true]);
@@ -200,31 +283,82 @@ RCT_EXPORT_METHOD(isRecognizing:(RCTResponseSenderBlock)callback) {
     }
 }
 
-RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr callback:(RCTResponseSenderBlock)callback) {
+RCT_EXPORT_METHOD(isReady:(RCTResponseSenderBlock)callback) {
+    if (self.isTearingDown || self.recognitionTask != nil) {
+        callback(@[@false]);
+    } else {
+        callback(@[@true]);
+    }
+}
+
+RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
+                 resolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
+{
     if (self.recognitionTask != nil) {
-        [self sendResult:RCTMakeError(@"Speech recognition already started!", nil, nil) :nil :nil :nil];
+        reject(@"speech_started", @"Speech recognition already started!", nil);
         return;
     }
+
+    if (self.isTearingDown) {
+        reject(@"not_ready", @"Speech recognition is not ready", nil);
+        return;
+    };
 
     [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
         switch (status) {
             case SFSpeechRecognizerAuthorizationStatusNotDetermined:
-                [self sendResult:RCTMakeError(@"Speech recognition not yet authorized", nil, nil) :nil :nil :nil];
-                break;
+                reject(@"not_authorized", @"Speech recognition is not authorized", nil);
+                return;
             case SFSpeechRecognizerAuthorizationStatusDenied:
-                [self sendResult:RCTMakeError(@"User denied access to speech recognition", nil, nil) :nil :nil :nil];
-                break;
+                reject(@"permissions", @"User denied permission to use speech recognition", nil);
+                return;
             case SFSpeechRecognizerAuthorizationStatusRestricted:
-                [self sendResult:RCTMakeError(@"Speech recognition restricted on this device", nil, nil) :nil :nil :nil];
-                break;
+                reject(@"restricted", @"Speech recognition restricted on this device", nil);
+                return;
             case SFSpeechRecognizerAuthorizationStatusAuthorized:
                 [self setupAndStartRecognizing:localeStr];
-                break;
+                resolve(nil);
+                return;
         }
     }];
-    callback(@[@false]);
 }
 
+// Used to control the audio category in case the user loads audio through a different audio library while speech recognition may be initializing
+// Credits: react-native-sound
+RCT_EXPORT_METHOD(setCategory:(NSString *)categoryName
+                  mixWithOthers:(BOOL)mixWithOthers) {
+    AVAudioSession *session = [AVAudioSession sharedInstance];
+    NSString *category = nil;
+    
+    if ([categoryName isEqual: @"Ambient"]) {
+        category = AVAudioSessionCategoryAmbient;
+    } else if ([categoryName isEqual: @"SoloAmbient"]) {
+        category = AVAudioSessionCategorySoloAmbient;
+    } else if ([categoryName isEqual: @"Playback"]) {
+        category = AVAudioSessionCategoryPlayback;
+    } else if ([categoryName isEqual: @"Record"]) {
+        category = AVAudioSessionCategoryRecord;
+    } else if ([categoryName isEqual: @"PlayAndRecord"]) {
+        category = AVAudioSessionCategoryPlayAndRecord;
+    }
+#if TARGET_OS_IOS
+    else if ([categoryName isEqual: @"AudioProcessing"]) {
+        category = AVAudioSessionCategoryAudioProcessing;
+    }
+#endif
+    else if ([categoryName isEqual: @"MultiRoute"]) {
+        category = AVAudioSessionCategoryMultiRoute;
+    }
+    
+    if (category) {
+        if (mixWithOthers) {
+            [session setCategory: category withOptions:AVAudioSessionCategoryOptionMixWithOthers error: nil];
+        } else {
+            [session setCategory: category error: nil];
+        }
+    }
+}
 
 - (dispatch_queue_t)methodQueue {
     return dispatch_get_main_queue();
