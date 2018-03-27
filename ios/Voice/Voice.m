@@ -225,6 +225,7 @@
     if (self.audioEngine.isRunning) {
         [self.audioEngine stop];
         [self.recognitionRequest endAudio];
+        [self.audioEngine.inputNode reset];
         [self.audioEngine.inputNode removeTapOnBus:0];
     }
 
