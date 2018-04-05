@@ -121,8 +121,11 @@ class RCTVoice {
     });
   }
   isReady() {
-    if (Platform.OS !== 'ios') return true;
     return new Promise((resolve, reject) => {
+      if (Platform.OS !== 'ios') {
+        resolve(true);
+        return;
+      }
       Voice.isReady(isReady => resolve(isReady));
     });
   }
