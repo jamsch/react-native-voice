@@ -117,14 +117,17 @@ class VoiceTest extends Component {
     console.log("Speech ended", e);
   }
 
-  onStartButtonPress = async e => {
+  onStartButtonPress = async () => {
     try {
-      if ((await Voice.isReady()) && (await Voice.isAvailable())) {
-        await Voice.start("en_US");
-      }
+      // Check await Voice.isAvailable() or the error: { code: 'not_available' } may throw
+      // Check await Voice.isReady() (iOS) or the error: { code: 'not_ready' } may throw
+      // Check await Voice.checkPermissionsAndroid() or the error: { code: 'permissions' } may throw
+      await Voice.start("en_US");
     } catch (exception) {
-      // exception = Error | { message: string, code: string }
-      console.log(exception);
+      // exception = Error | { code: string, message?: string }
+      if (exception.code) {
+       switch (exception.code) { ... }
+      }
     }
   };
 
@@ -196,6 +199,7 @@ This applies to `Voice.onSpeechError(e)` and when `await Voice.start()` throws a
 | ----------------- | ---------------------------------------- | ------------ |
 | `permissions`     | User denied device permissions           | Android, iOS |
 | `recognizer_busy` | Speech recognition has already started   | Android, iOS |
+| `not_available`   | Speech recognition is not available      | Android, iOS |
 | `network`         | Network error                            | Android      |
 | `network_timeout` | Network timeout error                    | Android      |
 | `speech_timeout`  | Speech recognition timeout               | Android      |
