@@ -267,7 +267,7 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
   public void onError(int errorCode) {
     String errorCodeText = getErrorText(errorCode);
     WritableMap event = Arguments.createMap();
-    event.putMap("code", errorCodeText);
+    event.putString("code", errorCodeText);
     sendEvent("onSpeechError", event);
     Log.d("ASR", "onError() - " + errorCodeText);
   }
