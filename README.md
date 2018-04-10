@@ -18,6 +18,7 @@ npm i react-native-voice --save
   * [Example](#example)
 * [API](#api)
 * [Events](#events)
+  * [Handling errors](#handling-errors)
 * [Permissions](#permissions)
   * [Android](#android)
   * [iOS](#ios)
@@ -86,15 +87,16 @@ public class MainActivity extends Activity implements ReactApplication {
 ### Example
 
 ```javascript
-import React, { Component } from 'react';
-import { TouchableOpacity, View, Text } from 'react-native';
-import Voice from 'react-native-voice';
+import React, { Component } from "react";
+import { TouchableOpacity, View, Text } from "react-native";
+import Voice from "react-native-voice";
 
 class VoiceTest extends Component {
-  constructor(props) {   
+  constructor(props) {
     Voice.onSpeechStart = this.onSpeechStartHandler.bind(this);
     Voice.onSpeechEnd = this.onSpeechEndHandler.bind(this);
     Voice.onSpeechResults = this.onSpeechResultsHandler.bind(this);
+    Voice.onSpeechError = this.onSpeechErrorHandler.bind(this);
     // Note: consider using Voice.removeAllListeners() if this component unmounts during speech recognition
   }
 
@@ -107,7 +109,7 @@ class VoiceTest extends Component {
   onSpeechResultsHandler(e) {
     // e = { value: string[] }
     // Loop through e.value for speech transcription results
-    console.log("Speech results", e)
+    console.log("Speech results", e);
   }
 
   onSpeechEndHandler(e) {
@@ -115,16 +117,16 @@ class VoiceTest extends Component {
     console.log("Speech ended", e);
   }
 
-  onStartButtonPress = async (e) => {
+  onStartButtonPress = async e => {
     try {
-      if (await Voice.isReady() && await Voice.isAvailable()) {
-        await Voice.start('en_US');
+      if ((await Voice.isReady()) && (await Voice.isAvailable())) {
+        await Voice.start("en_US");
       }
     } catch (exception) {
-      // exception = { message?: string, code: 'permissions' | 'restricted' | 'not_authorized' | 'not_ready' | 'speech_started' }
+      // exception = Error | { message: string, code: string }
       console.log(exception);
     }
-  }
+  };
 
   render() {
     return (
@@ -133,7 +135,7 @@ class VoiceTest extends Component {
           <Text>Start</Text>
         </View>
       </TouchableOpacity>
-    )
+    );
   }
 }
 ```
@@ -160,15 +162,47 @@ class VoiceTest extends Component {
 
 <p align="center">Callbacks that are invoked when a native event emitted.</p>
 
-| Event Name                          | Description                                            | Event                                           | Platform     |
-| ----------------------------------- | ------------------------------------------------------ | ----------------------------------------------- | ------------ |
-| Voice.onSpeechStart(event)          | Invoked when `.start()` is called without error.       | `{ error: false }`                              | Android, iOS |
-| Voice.onSpeechRecognized(event)     | Invoked when speech is recognized.                     | `{ error: false }`                              | Android, iOS |
-| Voice.onSpeechEnd(event)            | Invoked when SpeechRecognizer stops recognition.       | `{ error: false }`                              | Android, iOS |
-| Voice.onSpeechError(event)          | Invoked when an error occurs.                          | `{ error: Description of error as string }`     | Android, iOS |
-| Voice.onSpeechResults(event)        | Invoked when SpeechRecognizer is finished recognizing. | `{ value: [..., 'Speech recognized'] }`         | Android, iOS |
-| Voice.onSpeechPartialResults(event) | Invoked when any results are computed.                 | `{ value: [..., 'Partial speech recognized'] }` | Android, iOS |
-| Voice.onSpeechVolumeChanged(event)  | Invoked when pitch that is recognized changed.         | `{ value: pitch in dB }`                        | Android      |
+| Event Name                          | Description                                            | Event                                | Platform     |
+| ----------------------------------- | ------------------------------------------------------ | ------------------------------------ | ------------ |
+| Voice.onSpeechStart(event)          | Invoked when `.start()` is called without error.       | `{ error?: boolean }`                | Android, iOS |
+| Voice.onSpeechRecognized(event)     | Invoked when speech is recognized.                     | `{ error?: boolean }`                | Android, iOS |
+| Voice.onSpeechEnd(event)            | Invoked when SpeechRecognizer stops recognition.       | `{ error?: boolean }`                | Android, iOS |
+| Voice.onSpeechError(event)          | Invoked when an error occurs.                          | `{ code: string, message?: string }` | Android, iOS |
+| Voice.onSpeechResults(event)        | Invoked when SpeechRecognizer is finished recognizing. | `{ value: Array<string> }`           | Android, iOS |
+| Voice.onSpeechPartialResults(event) | Invoked when any results are computed.                 | `{ value: Array<string> }`           | Android, iOS |
+| Voice.onSpeechVolumeChanged(event)  | Invoked when pitch that is recognized changed.         | `{ value: pitch in dB }`             | Android      |
+
+### Handling errors
+
+This applies to `Voice.onSpeechError(e)` and when `await Voice.start()` throws an exception.
+
+```javascript
+  onSpeechErrorHandler(e) {
+    // e: { code: string, message?: string }
+    // switch (e.code) { ... }
+  }
+
+  ...
+  try {
+    await Voice.start();
+  } catch (e) {
+    // Note: on Android this will *likely* return an Error object.
+    // e: Error | { code: string, message?: string }
+    // switch (e.code) { ... }
+  }
+```
+
+| Code              | Description                              | Platform     |
+| ----------------- | ---------------------------------------- | ------------ |
+| `permissions`     | User denied device permissions           | Android, iOS |
+| `recognizer_busy` | Speech recognition has already started   | Android, iOS |
+| `network`         | Network error                            | Android      |
+| `network_timeout` | Network timeout error                    | Android      |
+| `speech_input`    | Speech input error                       | Android      |
+| `audio`           | Audio engine error                       | Android      |
+| `restricted`      | Speech recognition is restricted         | iOS          |
+| `not_authorized`  | Speech recognition is not authorized     | iOS          |
+| `not_ready`       | Speech recognition is not ready to start | iOS          |
 
 <h2 align="center">Permissions</h2>
 
