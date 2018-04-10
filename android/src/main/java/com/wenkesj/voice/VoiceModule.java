@@ -326,10 +326,10 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
     String message;
     switch (errorCode) {
       case SpeechRecognizer.ERROR_AUDIO:
-        message = "error_audio";
+        message = "audio";
         break;
       case SpeechRecognizer.ERROR_CLIENT:
-        message = "error_client";
+        message = "client";
         break;
       case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
         message = "permissions";
@@ -353,7 +353,7 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
         message = "speech_timeout";
         break;
       default:
-        message = "error_unknown";
+        message = "unknown";
         break;
     }
     return message;
