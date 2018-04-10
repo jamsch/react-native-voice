@@ -1,4 +1,4 @@
-import React, { NativeModules, NativeEventEmitter, Platform } from 'react-native';
+import React, { NativeModules, NativeEventEmitter, Platform, PermissionsAndroid } from 'react-native';
 
 const { Voice } = NativeModules;
 
@@ -19,6 +19,7 @@ class RCTVoice {
       onSpeechVolumeChanged: this._onSpeechVolumeChanged.bind(this),
     };
   }
+
   removeAllListeners() {
     Voice.onSpeechStart = null;
     Voice.onSpeechRecognized = null;
@@ -28,6 +29,7 @@ class RCTVoice {
     Voice.onSpeechPartialResults = null;
     Voice.onSpeechVolumeChanged = null;
   }
+
   destroy() {
     if (!this._loaded && !this._listeners) {
       return Promise.resolve();
@@ -46,6 +48,21 @@ class RCTVoice {
       });
     });
   }
+
+  async requestPermissionsAndroid() {
+    if (Platform.OS !== 'android') {
+      return true;
+    }
+
+    const rationale = {
+      title: 'Microphone Permission',
+      message: 'This app needs access to your microphone.',
+    };
+
+    const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO, rationale);
+    return result === true || result === PermissionsAndroid.RESULTS.GRANTED;
+  }
+
   start = async (locale, options = {}) => {
     if (!this._loaded && !this._listeners && voiceEmitter !== null) {
       this._listeners = Object.keys(this._events).map((key, index) => voiceEmitter.addListener(key, this._events[key]));
@@ -55,26 +72,32 @@ class RCTVoice {
       case 'ios':
         return await Voice.startSpeech(locale);
       case 'android':
-        return new Promise((resolve, reject) => {
-          const callback = (error) => {
-            if (error) {
-              reject(new Error(error));
-            } else {
-              resolve();
-            }
-          };
+        return new Promise(async (resolve, reject) => {
+          // Returns "true" if the user already has permissions
+
+          const hasPermissions = await this.requestPermissionsAndroid();
+          if (!hasPermissions) {
+            reject({ code: 'permissions' });
+            return;
+          }
+
+          // Start speech recognition
           Voice.startSpeech(
             locale,
-            Object.assign(
-              {
-                EXTRA_LANGUAGE_MODEL: 'LANGUAGE_MODEL_FREE_FORM',
-                EXTRA_MAX_RESULTS: 5,
-                EXTRA_PARTIAL_RESULTS: true,
-                REQUEST_PERMISSIONS_AUTO: true,
-              },
-              options,
-            ),
-            callback,
+            {
+              EXTRA_LANGUAGE_MODEL: 'LANGUAGE_MODEL_FREE_FORM',
+              EXTRA_MAX_RESULTS: 5,
+              EXTRA_PARTIAL_RESULTS: true,
+              REQUEST_PERMISSIONS_AUTO: true,
+              ...options,
+            },
+            (error) => {
+              if (error) {
+                reject(new Error(error));
+              } else {
+                resolve();
+              }
+            },
           );
         });
       default:
