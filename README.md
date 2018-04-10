@@ -114,7 +114,7 @@ class VoiceTest extends Component {
     console.log("Speech ended", e);
   }
 
-  async onStartButtonPress(e) {
+  onStartButtonPress = async (e) => {
     try {
       if (await Voice.isReady() && await Voice.isAvailable()) {
         await Voice.start('en_US');
