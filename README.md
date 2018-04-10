@@ -185,7 +185,7 @@ This applies to `Voice.onSpeechError(e)` and when `await Voice.start()` throws a
   ...
   try {
     await Voice.start();
-  } catch (e) {
+  } catch (e) {  
     // Note: on Android this will *likely* return an Error object.
     // e: Error | { code: string, message?: string }
     // switch (e.code) { ... }
@@ -198,8 +198,10 @@ This applies to `Voice.onSpeechError(e)` and when `await Voice.start()` throws a
 | `recognizer_busy` | Speech recognition has already started   | Android, iOS |
 | `network`         | Network error                            | Android      |
 | `network_timeout` | Network timeout error                    | Android      |
-| `speech_input`    | Speech input error                       | Android      |
+| `speech_timeout`  | Speech recognition timeout               | Android      |
 | `audio`           | Audio engine error                       | Android      |
+| `no_match`        | No recognition matches                   | Android      |
+| `server`          | Server error                             | Android      |
 | `restricted`      | Speech recognition is restricted         | iOS          |
 | `not_authorized`  | Speech recognition is not authorized     | iOS          |
 | `not_ready`       | Speech recognition is not ready to start | iOS          |
