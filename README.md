@@ -91,10 +91,11 @@ import { TouchableOpacity, View, Text } from 'react-native';
 import Voice from 'react-native-voice';
 
 class VoiceTest extends Component {
-  constructor(props) {
+  constructor(props) {   
     Voice.onSpeechStart = this.onSpeechStartHandler.bind(this);
     Voice.onSpeechEnd = this.onSpeechEndHandler.bind(this);
     Voice.onSpeechResults = this.onSpeechResultsHandler.bind(this);
+    // Note: consider using Voice.removeAllListeners() if this component unmounts during speech recognition
   }
 
   onSpeechStartHandler(e) {
@@ -120,7 +121,7 @@ class VoiceTest extends Component {
         await Voice.start('en_US');
       }
     } catch (exception) {
-      // iOS only:  exception.code = 'permissions' | 'restricted' | 'not_authorized' | 'not_ready' | 'speech_started'
+      // exception = { message?: string, code: 'permissions' | 'restricted' | 'not_authorized' | 'not_ready' | 'speech_started' }
       console.log(exception);
     }
   }
@@ -134,7 +135,6 @@ class VoiceTest extends Component {
       </TouchableOpacity>
     )
   }
-  ...
 }
 ```
 
