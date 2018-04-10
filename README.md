@@ -116,7 +116,9 @@ class VoiceTest extends Component {
 
   async onStartButtonPress(e) {
     try {
-      await Voice.start('en_US');
+      if (await Voice.isReady() && await Voice.isAvailable()) {
+        await Voice.start('en_US');
+      }
     } catch (exception) {
       // iOS only:  exception.code = 'permissions' | 'restricted' | 'not_authorized' | 'not_ready' | 'speech_started'
       console.log(exception);
@@ -142,15 +144,17 @@ class VoiceTest extends Component {
 
 **All methods _now_ return a `new Promise` for `async/await` compatibility.**
 
-| Method Name                | Description                                                                         | Platform     |
-| -------------------------- | ----------------------------------------------------------------------------------- | ------------ |
-| Voice.isAvailable()        | Checks whether a speech recognition service is available on the system.             | Android, iOS |
-| Voice.start(locale)        | Starts listening for speech for a specific locale. Returns null if no error occurs. | Android, iOS |
-| Voice.stop()               | Stops listening for speech. Returns null if no error occurs.                        | Android, iOS |
-| Voice.cancel()             | Cancels the speech recognition. Returns null if no error occurs.                    | Android, iOS |
-| Voice.destroy()            | Destroys the current SpeechRecognizer instance. Returns null if no error occurs.    | Android, iOS |
-| Voice.removeAllListeners() | Cleans/nullifies overridden `Voice` static methods.                                 | Android, iOS |
-| Voice.isRecognizing()      | Return if the SpeechRecognizer is recognizing.                                      | Android, iOS |
+| Method Name                         | Description                                                                         | Platform     |
+| ----------------------------------- | ----------------------------------------------------------------------------------- | ------------ |
+| Voice.isAvailable()                 | Checks whether a speech recognition service is available on the system.             | Android, iOS |
+| Voice.isReady()                     | Checks whether speech recognition is ready to be used.                              | iOS          |
+| Voice.start(locale: string)         | Starts listening for speech for a specific locale. Returns null if no error occurs. | Android, iOS |
+| Voice.stop()                        | Stops listening for speech. Returns null if no error occurs.                        | Android, iOS |
+| Voice.cancel()                      | Cancels the speech recognition. Returns null if no error occurs.                    | Android, iOS |
+| Voice.destroy()                     | Destroys the current SpeechRecognizer instance. Returns null if no error occurs.    | Android, iOS |
+| Voice.removeAllListeners()          | Cleans/nullifies overridden `Voice` static methods.                                 | Android, iOS |
+| Voice.isRecognizing()               | Return if the SpeechRecognizer is recognizing.                                      | Android, iOS |
+| Voice.setCategory(category: string) | Sets the iOS audio category.                                                        | iOS          |
 
 <h2 align="center">Events</h2>
 
