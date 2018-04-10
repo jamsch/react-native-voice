@@ -74,10 +74,16 @@ class RCTVoice {
       case 'android':
         return new Promise(async (resolve, reject) => {
           // Returns "true" if the user already has permissions
-
           const hasPermissions = await this.requestPermissionsAndroid();
           if (!hasPermissions) {
             reject({ code: 'permissions' });
+            return;
+          }
+
+          // Checks whether speech recognition is available on the device
+          const isAvailable = await Voice.isSpeechAvailable();
+          if (!isAvailable) {
+            reject({ code: 'not_available' });
             return;
           }
 
@@ -118,6 +124,7 @@ class RCTVoice {
       });
     });
   }
+
   cancel() {
     if (!this._loaded && !this._listeners) {
       return Promise.resolve();
@@ -132,6 +139,7 @@ class RCTVoice {
       });
     });
   }
+
   isAvailable() {
     return new Promise((resolve, reject) => {
       Voice.isSpeechAvailable((isAvailable, error) => {
