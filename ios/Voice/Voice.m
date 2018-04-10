@@ -297,7 +297,7 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
                  rejecter:(RCTPromiseRejectBlock)reject)
 {
     if (self.recognitionTask != nil) {
-        reject(@"speech_started", @"Speech recognition already started!", nil);
+        reject(@"recognizer_busy", @"Speech recognition already started!", nil);
         return;
     }
 
