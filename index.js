@@ -81,7 +81,7 @@ class RCTVoice {
           }
 
           // Checks whether speech recognition is available on the device
-          const isAvailable = await Voice.isSpeechAvailable();
+          const isAvailable = await this.isAvailable();
           if (!isAvailable) {
             reject({ code: 'not_available' });
             return;
