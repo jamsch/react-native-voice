@@ -179,7 +179,7 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
           speech.cancel();
           isRecognizing = false;
           callback.invoke(false);
-        } catch(Exception e) {
+        } catch (Exception e) {
           callback.invoke(e.getMessage());
         }
       }
@@ -265,9 +265,9 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
 
   @Override
   public void onError(int errorCode) {
-    String errorMessage = String.format("%d/%s", errorCode, getErrorText(errorCode));
+    String errorCodeText = getErrorText(errorCode);
     WritableMap error = Arguments.createMap();
-    error.putString("message", errorMessage);
+    error.putString("code", errorCodeText);
     WritableMap event = Arguments.createMap();
     event.putMap("error", error);
     sendEvent("onSpeechError", event);
@@ -326,34 +326,34 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
     String message;
     switch (errorCode) {
       case SpeechRecognizer.ERROR_AUDIO:
-        message = "Audio recording error";
+        message = "error_audio";
         break;
       case SpeechRecognizer.ERROR_CLIENT:
-        message = "Client side error";
+        message = "error_client";
         break;
       case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
-        message = "Insufficient permissions";
+        message = "permissions";
         break;
       case SpeechRecognizer.ERROR_NETWORK:
-        message = "Network error";
+        message = "network";
         break;
       case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
-        message = "Network timeout";
+        message = "network_timeout";
         break;
       case SpeechRecognizer.ERROR_NO_MATCH:
-        message = "No match";
+        message = "no_match";
         break;
       case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
-        message = "RecognitionService busy";
+        message = "recognizer_busy";
         break;
       case SpeechRecognizer.ERROR_SERVER:
-        message = "error from server";
+        message = "server";
         break;
       case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
-        message = "No speech input";
+        message = "speech_timeout";
         break;
       default:
-        message = "Didn't understand, please try again.";
+        message = "error_unknown";
         break;
     }
     return message;
