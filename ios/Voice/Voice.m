@@ -261,10 +261,10 @@ RCT_EXPORT_METHOD(isSpeechAvailable:resolver:(RCTPromiseResolveBlock)resolve) {
     [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
         switch (status) {
             case SFSpeechRecognizerAuthorizationStatusAuthorized:
-                resolve(@[@true]);
+                resolve(@true);
                 break;
             default:
-                resolve(@[@false]);
+                resolve(@false);
         }
     }];
 }
@@ -273,22 +273,22 @@ RCT_EXPORT_METHOD(isRecognizing:resolver:(RCTPromiseResolveBlock)resolve) {
     if (self.recognitionTask != nil) {
         switch (self.recognitionTask.state) {
             case SFSpeechRecognitionTaskStateRunning:
-                resolve(@[@true]);
+                resolve(@true);
                 break;
             default:
-                resolve(@[@false]);
+                resolve(@false);
         }
     }
     else {
-        resolve(@[@false]);
+        resolve(@false);
     }
 }
 
 RCT_EXPORT_METHOD(isReady:resolver:(RCTPromiseResolveBlock)resolve) {
     if (self.isTearingDown || self.recognitionTask != nil) {
-        resolve(@[@false]);
+        resolve(@false);
     } else {
-        resolve(@[@true]);
+        resolve(@true);
     }
 }
 
