@@ -1,9 +1,9 @@
-import React, { NativeModules, NativeEventEmitter, Platform, PermissionsAndroid } from 'react-native';
+import React, { NativeModules, NativeEventEmitter, Platform, PermissionsAndroid } from "react-native";
 
 const { Voice } = NativeModules;
 
 // NativeEventEmitter is only availabe on React Native platforms, so this conditional is used to avoid import conflicts in the browser/server
-const voiceEmitter = Platform.OS !== 'web' ? new NativeEventEmitter(Voice) : null;
+const voiceEmitter = Platform.OS !== "web" ? new NativeEventEmitter(Voice) : null;
 
 class RCTVoice {
   constructor() {
@@ -16,7 +16,7 @@ class RCTVoice {
       onSpeechError: this._onSpeechError.bind(this),
       onSpeechResults: this._onSpeechResults.bind(this),
       onSpeechPartialResults: this._onSpeechPartialResults.bind(this),
-      onSpeechVolumeChanged: this._onSpeechVolumeChanged.bind(this),
+      onSpeechVolumeChanged: this._onSpeechVolumeChanged.bind(this)
     };
   }
 
@@ -28,147 +28,112 @@ class RCTVoice {
     Voice.onSpeechResults = null;
     Voice.onSpeechPartialResults = null;
     Voice.onSpeechVolumeChanged = null;
+
+    if (this._listeners) {
+      this._listeners.map((listener, index) => listener.remove());
+      this._listeners = null;
+    }
   }
 
-  destroy() {
+  async destroy() {
     if (!this._loaded && !this._listeners) {
-      return Promise.resolve();
+      return;
     }
-    return new Promise((resolve, reject) => {
-      Voice.destroySpeech((error) => {
-        if (error) {
-          reject(new Error(error));
-        } else {
-          if (this._listeners) {
-            this._listeners.map((listener, index) => listener.remove());
-            this._listeners = null;
-          }
-          resolve();
-        }
-      });
-    });
+    try {
+      await Voice.destroySpeech();
+      if (this._listeners) {
+        this.removeAllListeners();
+      }
+    } catch (error) {
+      throw error;
+    }
   }
 
   async requestPermissionsAndroid() {
-    if (Platform.OS !== 'android') {
+    if (Platform.OS !== "android") {
       return true;
     }
 
     const rationale = {
-      title: 'Microphone Permission',
-      message: 'This app needs access to your microphone.',
+      title: "Microphone Permission",
+      message: "This app needs access to your microphone."
     };
 
     const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO, rationale);
     return result === true || result === PermissionsAndroid.RESULTS.GRANTED;
   }
 
-  start = async (locale, options = {}) => {
+  async start(locale, options = {}) {
     if (!this._loaded && !this._listeners && voiceEmitter !== null) {
       this._listeners = Object.keys(this._events).map((key, index) => voiceEmitter.addListener(key, this._events[key]));
     }
 
     switch (Platform.OS) {
-      case 'ios':
+      case "ios":
         return await Voice.startSpeech(locale);
-      case 'android':
-        return new Promise(async (resolve, reject) => {
-          // Returns "true" if the user already has permissions
-          const hasPermissions = await this.requestPermissionsAndroid();
-          if (!hasPermissions) {
-            reject({ code: 'permissions' });
-            return;
-          }
+      case "android":
+        // Returns "true" if the user already has permissions
+        const hasPermissions = await this.requestPermissionsAndroid();
+        if (!hasPermissions) {
+          throw { code: "permissions" };
+        }
 
-          // Checks whether speech recognition is available on the device
-          const isAvailable = await this.isAvailable();
-          if (!isAvailable) {
-            reject({ code: 'not_available' });
-            return;
-          }
+        // Checks whether speech recognition is available on the device
+        const isAvailable = await this.isAvailable();
+        if (!isAvailable) {
+          throw { code: "not_available" };
+        }
 
-          // Start speech recognition
-          Voice.startSpeech(
-            locale,
-            {
-              EXTRA_LANGUAGE_MODEL: 'LANGUAGE_MODEL_FREE_FORM',
-              EXTRA_MAX_RESULTS: 5,
-              EXTRA_PARTIAL_RESULTS: true,
-              REQUEST_PERMISSIONS_AUTO: true,
-              ...options,
-            },
-            (error) => {
-              if (error) {
-                reject(new Error(error));
-              } else {
-                resolve();
-              }
-            },
-          );
-        });
+        // Start speech recognition
+        const speechOptions = {
+          EXTRA_LANGUAGE_MODEL: "LANGUAGE_MODEL_FREE_FORM",
+          EXTRA_MAX_RESULTS: 5,
+          EXTRA_PARTIAL_RESULTS: true,
+          REQUEST_PERMISSIONS_AUTO: true,
+          ...options
+        };
+        await Voice.startSpeech(locale, speechOptions);
       default:
-        throw new Exception('Error: Platform not supported');
+        throw new Exception("Error: Platform not supported");
     }
-  };
-  stop() {
-    if (!this._loaded && !this._listeners) {
-      return Promise.resolve();
-    }
-    return new Promise((resolve, reject) => {
-      Voice.stopSpeech((error) => {
-        if (error) {
-          reject(new Error(error));
-        } else {
-          resolve();
-        }
-      });
-    });
   }
 
-  cancel() {
+  async stop() {
     if (!this._loaded && !this._listeners) {
-      return Promise.resolve();
+      return;
     }
-    return new Promise((resolve, reject) => {
-      Voice.cancelSpeech((error) => {
-        if (error) {
-          reject(new Error(error));
-        } else {
-          resolve();
-        }
-      });
-    });
+    // on Android this may throw an error
+    await Voice.stopSpeech();
   }
 
-  isAvailable() {
-    return new Promise((resolve, reject) => {
-      Voice.isSpeechAvailable((isAvailable, error) => {
-        if (error) {
-          reject(new Error(error));
-        } else {
-          resolve(isAvailable);
-        }
-      });
-    });
+  async cancel() {
+    if (!this._loaded && !this._listeners) {
+      return;
+    }
+    // on Android this may throw an error
+    await Voice.cancelSpeech();
   }
-  isReady() {
-    return new Promise((resolve, reject) => {
-      if (Platform.OS !== 'ios') {
-        resolve(true);
-        return;
-      }
-      Voice.isReady(isReady => resolve(isReady));
-    });
+
+  async isAvailable() {
+    return await Voice.isSpeechAvailable();
   }
+
+  async isReady() {
+    if (Platform.OS !== "ios") {
+      return true;
+    }
+    return await Voice.isReady();
+  }
+
   setCategory(category) {
-    if (Platform.OS !== 'ios') return;
+    if (Platform.OS !== "ios") return;
     Voice.setCategory(category);
   }
-  isRecognizing() {
-    return new Promise((resolve, reject) => {
-      Voice.isRecognizing(isRecognizing => resolve(isRecognizing));
-    });
+
+  async isRecognizing() {
+    return await Voice.isRecognizing();
   }
+
   _onSpeechStart(e) {
     if (this.onSpeechStart) {
       this.onSpeechStart(e);

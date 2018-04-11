@@ -130,7 +130,7 @@
     // Configure request so that results are returned before audio recording is finished
     self.recognitionRequest.shouldReportPartialResults = YES;
 
-    [self sendEventWithName:@"onSpeechStart" body:@true];
+    [self sendEventWithName:@"onSpeechStart"];
     
     
     // A recognition task represents a speech recognition session.
@@ -154,7 +154,7 @@
 
         if (isFinal == YES) {
             if (self.recognitionTask.isCancelled || self.recognitionTask.isFinishing){
-                [self sendEventWithName:@"onSpeechEnd" body:@{@"error": @false}];
+                [self sendEventWithName:@"onSpeechEnd"];
             }
             [self teardown];
         }
@@ -201,7 +201,7 @@
 
 - (void) sendResult:(NSDictionary*)error :(NSString*)bestTranscription :(NSArray*)transcriptions :(NSNumber*)isFinal {
     if (error != nil) {
-        [self sendEventWithName:@"onSpeechError" body:@{@"error": error}];
+        [self sendEventWithName:@"onSpeechError"];
     }
     if (bestTranscription != nil) {
         [self sendEventWithName:@"onSpeechResults" body:@{@"value":@[bestTranscription]} ];
@@ -240,55 +240,55 @@
     }
 }
 
-RCT_EXPORT_METHOD(stopSpeech:(RCTResponseSenderBlock)callback)
+RCT_EXPORT_METHOD(stopSpeech:resolver:(RCTPromiseResolveBlock)resolve)
 {
     [self.recognitionTask finish];
-    callback(@[@false]);
+    resolve(nil);
 }
 
 
-RCT_EXPORT_METHOD(cancelSpeech:(RCTResponseSenderBlock)callback) {
+RCT_EXPORT_METHOD(cancelSpeech:resolver:(RCTPromiseResolveBlock)resolve) {
     [self.recognitionTask cancel];
-    callback(@[@false]);
+    resolve(nil);
 }
 
-RCT_EXPORT_METHOD(destroySpeech:(RCTResponseSenderBlock)callback) {
+RCT_EXPORT_METHOD(destroySpeech:resolver:(RCTPromiseResolveBlock)resolve) {
     [self teardown];
-    callback(@[@false]);
+    resolve(nil);
 }
 
-RCT_EXPORT_METHOD(isSpeechAvailable:(RCTResponseSenderBlock)callback) {
+RCT_EXPORT_METHOD(isSpeechAvailable:resolver:(RCTPromiseResolveBlock)resolve) {
     [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
         switch (status) {
             case SFSpeechRecognizerAuthorizationStatusAuthorized:
-                callback(@[@true]);
+                resolve(@[@true]);
                 break;
             default:
-                callback(@[@false]);
+                resolve(@[@false]);
         }
     }];
 }
     
-RCT_EXPORT_METHOD(isRecognizing:(RCTResponseSenderBlock)callback) {
+RCT_EXPORT_METHOD(isRecognizing:resolver:(RCTPromiseResolveBlock)resolve) {
     if (self.recognitionTask != nil) {
         switch (self.recognitionTask.state) {
             case SFSpeechRecognitionTaskStateRunning:
-                callback(@[@true]);
+                resolve(@[@true]);
                 break;
             default:
-                callback(@[@false]);
+                resolve(@[@false]);
         }
     }
     else {
-        callback(@[@false]);
+        resolve(@[@false]);
     }
 }
 
-RCT_EXPORT_METHOD(isReady:(RCTResponseSenderBlock)callback) {
+RCT_EXPORT_METHOD(isReady:resolver:(RCTPromiseResolveBlock)resolve) {
     if (self.isTearingDown || self.recognitionTask != nil) {
-        callback(@[@false]);
+        resolve(@[@false]);
     } else {
-        callback(@[@true]);
+        resolve(@[@true]);
     }
 }
 
@@ -370,3 +370,4 @@ RCT_EXPORT_MODULE()
 
 
 @end
+
