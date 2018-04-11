@@ -192,20 +192,24 @@ This applies to `Voice.onSpeechError(e)` and when `await Voice.start()` throws a
   }
 ```
 
-| Code              | Description                                           | Platform     |
-| ----------------- | ----------------------------------------------------- | ------------ |
-| `permissions`     | User denied microphone/speech recognition permissions | Android, iOS |
-| `recognizer_busy` | Speech recognition has already started                | Android, iOS |
-| `not_available`   | Speech recognition is not available on the device     | Android      |
-| `network`         | Network error                                         | Android      |
-| `network_timeout` | Network timeout error                                 | Android      |
-| `speech_timeout`  | Speech recognition timeout                            | Android      |
-| `audio`           | Audio engine error                                    | Android      |
-| `no_match`        | No recognition matches                                | Android      |
-| `server`          | Server error                                          | Android      |
-| `restricted`      | Speech recognition is restricted                      | iOS          |
-| `not_authorized`  | Speech recognition is not authorized                  | iOS          |
-| `not_ready`       | Speech recognition is not ready to start              | iOS          |
+| Code               | Description                                                     | Platform     |
+| ------------------ | --------------------------------------------------------------- | ------------ |
+| `permissions`      | User denied microphone/speech recognition permissions           | Android, iOS |
+| `recognizer_busy`  | Speech recognition has already started                          | Android, iOS |
+| `not_available`    | Speech recognition is not available on the device               | Android, iOS |
+| `audio`            | Audio engine / Audio session error                              | Android, iOS |
+| `network`          | Network error                                                   | Android      |
+| `network_timeout`  | Network timeout error                                           | Android      |
+| `speech_timeout`   | Speech recognition timeout                                      | Android      |
+| `no_match`         | No recognition matches                                          | Android      |
+| `server`           | Server error                                                    | Android      |
+| `restricted`       | Speech recognition is restricted                                | iOS          |
+| `not_authorized`   | Speech recognition is not authorized                            | iOS          |
+| `not_ready`        | Speech recognition is not ready to start                        | iOS          |
+| `recognition_init` | Speech recognition initialization failed                        | iOS          |
+| `start_recording`  | `[inputNode installTapOnBus:0...]` call failed                  | iOS          |
+| `input`            | Audio engine has no input node                                  | iOS          |
+| `recognition_fail` | General failure while using recognition. Has a `"message"` prop | iOS          |
 
 <h2 align="center">Permissions</h2>
 
