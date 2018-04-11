@@ -149,10 +149,11 @@
             for (SFTranscription* transcription in result.transcriptions) {
                 [transcriptionDics addObject:transcription.formattedString];
             }
-            [self sendResult:nil:result.bestTranscription.formattedString :transcriptionDics :@(isFinal)];
+            
+            [self sendResult:nil :result.bestTranscription.formattedString :transcriptionDics :[NSNumber numberWithBool:isFinal]];
         }
         
-        if (isFinal == YES) {
+        if (isFinal) {
             if (self.recognitionTask.isCancelled || self.recognitionTask.isFinishing){
                 [self sendEventWithName:@"onSpeechEnd" body:nil];
             }
@@ -204,12 +205,16 @@
         [self sendEventWithName:@"onSpeechError" body:error];
     }
     if (bestTranscription != nil) {
-        [self sendEventWithName:@"onSpeechResults" body:@{@"value":@[bestTranscription]} ];
-    }
-    if (transcriptions != nil) {
+        if ([isFinal boolValue] == YES) {
+            [self sendEventWithName:@"onSpeechResults" body:@{@"value":@[bestTranscription]} ];
+        } else {
+            [self sendEventWithName:@"onSpeechPartialResults" body:@{@"value":transcriptions} ];
+        }
+    } else if (transcriptions != nil) {
         [self sendEventWithName:@"onSpeechPartialResults" body:@{@"value":transcriptions} ];
     }
-    if (isFinal != nil) {
+    
+    if ([isFinal boolValue] == YES) {
         [self sendEventWithName:@"onSpeechRecognized" body: @{@"isFinal": isFinal}];
     }
 }
@@ -240,24 +245,24 @@
     }
 }
 
-RCT_EXPORT_METHOD(stopSpeech:resolver:(RCTPromiseResolveBlock)resolve)
+RCT_EXPORT_METHOD(stopSpeech:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 {
     [self.recognitionTask finish];
     resolve(nil);
 }
 
 
-RCT_EXPORT_METHOD(cancelSpeech:resolver:(RCTPromiseResolveBlock)resolve) {
+RCT_EXPORT_METHOD(cancelSpeech:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
     [self.recognitionTask cancel];
     resolve(nil);
 }
 
-RCT_EXPORT_METHOD(destroySpeech:resolver:(RCTPromiseResolveBlock)resolve) {
+RCT_EXPORT_METHOD(destroySpeech:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
     [self teardown];
     resolve(nil);
 }
 
-RCT_EXPORT_METHOD(isSpeechAvailable:resolver:(RCTPromiseResolveBlock)resolve) {
+RCT_EXPORT_METHOD(isSpeechAvailable:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
     [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
         switch (status) {
             case SFSpeechRecognizerAuthorizationStatusAuthorized:
@@ -269,27 +274,26 @@ RCT_EXPORT_METHOD(isSpeechAvailable:resolver:(RCTPromiseResolveBlock)resolve) {
     }];
 }
 
-RCT_EXPORT_METHOD(isRecognizing:resolver:(RCTPromiseResolveBlock)resolve) {
+RCT_EXPORT_METHOD(isRecognizing:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
     if (self.recognitionTask != nil) {
         switch (self.recognitionTask.state) {
             case SFSpeechRecognitionTaskStateRunning:
                 resolve(@true);
-                break;
+                return;
             default:
                 resolve(@false);
+                return;
         }
     }
-    else {
-        resolve(@false);
-    }
+    resolve(@false);
 }
 
-RCT_EXPORT_METHOD(isReady:resolver:(RCTPromiseResolveBlock)resolve) {
+RCT_EXPORT_METHOD(isReady:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
     if (self.isTearingDown || self.recognitionTask != nil) {
         resolve(@false);
-    } else {
-        resolve(@true);
+        return;
     }
+    resolve(@true);
 }
 
 RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
@@ -370,4 +374,3 @@ RCT_EXPORT_MODULE()
 
 
 @end
-

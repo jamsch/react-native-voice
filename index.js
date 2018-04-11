@@ -134,9 +134,9 @@ class RCTVoice {
     return await Voice.isRecognizing();
   }
 
-  _onSpeechStart(e) {
+  _onSpeechStart() {
     if (this.onSpeechStart) {
-      this.onSpeechStart(e);
+      this.onSpeechStart();
     }
   }
   _onSpeechRecognized(e) {

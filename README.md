@@ -95,15 +95,21 @@ class VoiceTest extends Component {
   constructor(props) {
     Voice.onSpeechStart = this.onSpeechStartHandler.bind(this);
     Voice.onSpeechEnd = this.onSpeechEndHandler.bind(this);
+    Voice.onSpeechPartialResults = this.onSpeechPartialResultsHandler.bind(this);
     Voice.onSpeechResults = this.onSpeechResultsHandler.bind(this);
     Voice.onSpeechError = this.onSpeechErrorHandler.bind(this);
     // Note: consider using Voice.removeAllListeners() if this component unmounts during speech recognition
   }
 
-  onSpeechStartHandler(e) {
-    // e = { error?: boolean }
-    console.log("Speech started", e);
+  onSpeechStartHandler() {
+    console.log("Speech started");
     // Update state to notify user that speech recognition has started
+  }
+
+   onSpeechPartialResultsHandler(e) {
+    // e = { value: string[] }
+    // Loop through e.value for speech transcription results
+    console.log("Partial results", e);
   }
 
   onSpeechResultsHandler(e) {
@@ -117,14 +123,17 @@ class VoiceTest extends Component {
     console.log("Speech ended", e);
   }
 
+  onSpeechErrorHandler(e) {
+    // e = { code?: string, message?: string }
+    switch (e.code) { ... }
+  }
+
   onStartButtonPress = async () => {
     try {
       await Voice.start("en_US");
     } catch (exception) {
       // exception = Error | { code: string, message?: string }
-      if (exception.code) {
-       switch (exception.code) { ... }
-      }
+      onSpeechErrorHandler(exception);
     }
   };
 
@@ -164,8 +173,8 @@ class VoiceTest extends Component {
 
 | Event Name                          | Description                                            | Event                                | Platform     |
 | ----------------------------------- | ------------------------------------------------------ | ------------------------------------ | ------------ |
-| Voice.onSpeechStart(event)          | Invoked when `.start()` is called without error.       | `{ error?: boolean }`                | Android, iOS |
-| Voice.onSpeechRecognized(event)     | Invoked when speech is recognized.                     | `{ error?: boolean }`                | Android, iOS |
+| Voice.onSpeechStart()               | Invoked when `.start()` is called without error.       | `null`                               | Android, iOS |
+| Voice.onSpeechRecognized(event)     | Invoked when speech is recognized.                     | `{ isFinal: boolean }`               | Android, iOS |
 | Voice.onSpeechEnd(event)            | Invoked when SpeechRecognizer stops recognition.       | `{ error?: boolean }`                | Android, iOS |
 | Voice.onSpeechError(event)          | Invoked when an error occurs.                          | `{ code: string, message?: string }` | Android, iOS |
 | Voice.onSpeechResults(event)        | Invoked when SpeechRecognizer is finished recognizing. | `{ value: Array<string> }`           | Android, iOS |
@@ -185,7 +194,7 @@ This applies to `Voice.onSpeechError(e)` and when `await Voice.start()` throws a
   ...
   try {
     await Voice.start();
-  } catch (e) {  
+  } catch (e) {
     // Note: on Android this will *likely* return an Error object.
     // e: Error | { code: string, message?: string }
     // switch (e.code) { ... }
@@ -200,7 +209,7 @@ This applies to `Voice.onSpeechError(e)` and when `await Voice.start()` throws a
 | `audio`            | Audio engine / Audio session error                              | Android, iOS |
 | `network`          | Network error                                                   | Android      |
 | `network_timeout`  | Network timeout error                                           | Android      |
-| `speech_timeout`   | Speech recognition timeout                                      | Android      |
+| `speech_timeout`   | Speech ios apprecognition timeout                               | Android      |
 | `no_match`         | No recognition matches                                          | Android      |
 | `server`           | Server error                                                    | Android      |
 | `restricted`       | Speech recognition is restricted                                | iOS          |
