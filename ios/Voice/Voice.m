@@ -58,7 +58,7 @@
     [self.audioSession setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&audioSessionError];
     
     if (audioSessionError != nil) {
-        [self sendResult:@{@"code": @"audio"} :nil :nil :nil];
+        [self sendResult:@{@"code": @"audio", @"message": [audioSessionError localizedDescription]} :nil :nil :nil];
         return NO;
     }
     
@@ -111,6 +111,8 @@
     }
     
     self.recognitionRequest = [[SFSpeechAudioBufferRecognitionRequest alloc] init];
+    // Configure request so that results are returned before audio recording is finished
+    self.recognitionRequest.shouldReportPartialResults = YES;
     
     if (self.recognitionRequest == nil) {
         [self sendResult:@{@"code": @"recognition_init"} :nil :nil :nil];
@@ -125,13 +127,9 @@
     if (inputNode == nil) {
         [self sendResult:@{@"code": @"input"} :nil :nil :nil];
         return;
-    }
+    }    
     
-    // Configure request so that results are returned before audio recording is finished
-    self.recognitionRequest.shouldReportPartialResults = YES;
-    
-    [self sendEventWithName:@"onSpeechStart" body:nil];
-    
+    [self sendEventWithName:@"onSpeechStart" body:nil];    
     
     // A recognition task represents a speech recognition session.
     // We keep a reference to the task so that it can be cancelled.
@@ -150,11 +148,11 @@
                 [transcriptionDics addObject:transcription.formattedString];
             }
             
-            [self sendResult:nil :result.bestTranscription.formattedString :transcriptionDics :[NSNumber numberWithBool:isFinal]];
+            [self sendResult :nil :result.bestTranscription.formattedString :transcriptionDics :[NSNumber numberWithBool:isFinal]];
         }
         
         if (isFinal) {
-            if (self.recognitionTask.isCancelled || self.recognitionTask.isFinishing){
+            if (self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
                 [self sendEventWithName:@"onSpeechEnd" body:nil];
             }
             [self teardown];
@@ -213,7 +211,7 @@
     } else if (transcriptions != nil) {
         [self sendEventWithName:@"onSpeechPartialResults" body:@{@"value":transcriptions} ];
     }
-    
+
     if ([isFinal boolValue] == YES) {
         [self sendEventWithName:@"onSpeechRecognized" body: @{@"isFinal": isFinal}];
     }
@@ -226,10 +224,12 @@
     
     // Set back audio session category
     [self resetAudioSession];
+
+    // End recognition request
+    [self.recognitionRequest endAudio];
     
     if (self.audioEngine.isRunning) {
         [self.audioEngine stop];
-        [self.recognitionRequest endAudio];
         [self.audioEngine.inputNode reset];
         [self.audioEngine.inputNode removeTapOnBus:0];
     }
