@@ -1,4 +1,5 @@
-import React, { NativeModules, NativeEventEmitter, Platform, PermissionsAndroid } from "react-native";
+import React from "react";
+import { NativeModules, NativeEventEmitter, Platform, PermissionsAndroid } from "react-native";
 
 const { Voice } = NativeModules;
 
@@ -20,6 +21,34 @@ class RCTVoice {
     };
   }
 
+  rationale = {
+    title: "Microphone Permission",
+    message: "This app would like access to use your microphone."
+  };
+
+  defaultSpeechOptionsAndroid = {
+    EXTRA_LANGUAGE_MODEL: "LANGUAGE_MODEL_FREE_FORM",
+    EXTRA_MAX_RESULTS: 5,
+    EXTRA_PARTIAL_RESULTS: true,
+    REQUEST_PERMISSIONS_AUTO: true
+  };
+
+  /**
+   * Updates the rationale
+   *
+   * @param {string} title
+   * @param {string} message
+   */
+  setPermissionRationaleAndroid(title, message) {
+    this.rationale = {
+      title,
+      message
+    };
+  }
+
+  /**
+   * Removes all event listeners. Use when unmounting your component.
+   */
   removeAllListeners() {
     Voice.onSpeechStart = null;
     Voice.onSpeechRecognized = null;
@@ -35,6 +64,9 @@ class RCTVoice {
     }
   }
 
+  /**
+   * Destroys the speech recognizer instance & removes all listeners
+   */
   async destroy() {
     if (!this._loaded && !this._listeners) {
       return;
@@ -49,20 +81,24 @@ class RCTVoice {
     }
   }
 
+  /**
+   * Requests permissions to use the microphone.
+   * Returns true if the user provided permissions
+   */
   async requestPermissionsAndroid() {
     if (Platform.OS !== "android") {
       return true;
     }
 
-    const rationale = {
-      title: "Microphone Permission",
-      message: "This app needs access to your microphone."
-    };
-
-    const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO, rationale);
+    const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO, this.rationale);
     return result === true || result === PermissionsAndroid.RESULTS.GRANTED;
   }
 
+  /**
+   * Starts speech recognition
+   * @param {string} locale Locale string
+   * @param {object} options (Android) Additional options for speech recognition
+   */
   async start(locale, options = {}) {
     if (!this._loaded && !this._listeners && voiceEmitter !== null) {
       this._listeners = Object.keys(this._events).map((key, index) => voiceEmitter.addListener(key, this._events[key]));
@@ -86,15 +122,13 @@ class RCTVoice {
 
         // Start speech recognition
         const speechOptions = {
-          EXTRA_LANGUAGE_MODEL: "LANGUAGE_MODEL_FREE_FORM",
-          EXTRA_MAX_RESULTS: 5,
-          EXTRA_PARTIAL_RESULTS: true,
-          REQUEST_PERMISSIONS_AUTO: true,
+          ...this.defaultSpeechOptionsAndroid,
           ...options
         };
         await Voice.startSpeech(locale, speechOptions);
       default:
-        throw new Exception("Error: Platform not supported");
+        // Non-android & iOS devices are not supported
+        throw { code: "not_available" };
     }
   }
 
@@ -106,6 +140,9 @@ class RCTVoice {
     await Voice.stopSpeech();
   }
 
+  /**
+   * Cancels speech recognition
+   */
   async cancel() {
     if (!this._loaded && !this._listeners) {
       return;
@@ -114,10 +151,16 @@ class RCTVoice {
     await Voice.cancelSpeech();
   }
 
+  /**
+   * Verifies that voice recognition is available on the device
+   */
   async isAvailable() {
     return await Voice.isSpeechAvailable();
   }
 
+  /**
+   * (iOS) Verifies that voice recognition is ready to be used
+   */
   async isReady() {
     if (Platform.OS !== "ios") {
       return true;
@@ -125,9 +168,14 @@ class RCTVoice {
     return await Voice.isReady();
   }
 
-  setCategory(category) {
+  /**
+   * Sets the iOS audio category.
+   * @param {string} category "Ambient" | "SoloAmbient" | "Playback" | "Record" | "Record" | "PlayAndRecord" | "AudioProcessing" | "MultiRoute"
+   * @param {boolean} mixWithOthers Enables: "AVAudioSessionCategoryOptionMixWithOthers"
+   */
+  setCategory(category, mixWithOthers = false) {
     if (Platform.OS !== "ios") return;
-    Voice.setCategory(category);
+    Voice.setCategory(category, mixWithOthers);
   }
 
   async isRecognizing() {

@@ -5,18 +5,13 @@
   "main": "index.js",
   "author": "Sam Wenke <samwenke@gmail.com>",
   "peerDependencies": {
-    "react-native": ">=0.40.0"
+    "react-native": ">=0.40.0",
+    "react": ">=15.6.2"
   },
   "devDependencies": {
-    "react": ">=16.0.0-alpha.12"
+    "react": "^16.3.1"
   },
-  "keywords": [
-    "react-native",
-    "speech",
-    "voice",
-    "android",
-    "ios"
-  ],
+  "keywords": ["react-native", "speech", "voice", "android", "ios"],
   "repository": {
     "type": "git",
     "url": "git://github.com/wenkesj/react-native-voice.git"
