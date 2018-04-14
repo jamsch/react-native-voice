@@ -125,7 +125,7 @@ class RCTVoice {
           ...this.defaultSpeechOptionsAndroid,
           ...options
         };
-        await Voice.startSpeech(locale, speechOptions);
+        return await Voice.startSpeech(locale, speechOptions);
       default:
         // Non-android & iOS devices are not supported
         throw { code: "not_available" };
