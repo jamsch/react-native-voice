@@ -231,8 +231,10 @@
     if (self.audioEngine.isRunning) {
         [self.audioEngine stop];
         [self.audioEngine.inputNode reset];
-        [self.audioEngine.inputNode removeTapOnBus:0];
     }
+
+    // Remove tap on bus (experimental)
+    [self.audioEngine.inputNode removeTapOnBus:0];
     
     self.recognitionRequest = nil;
     self.isTearingDown = NO;
