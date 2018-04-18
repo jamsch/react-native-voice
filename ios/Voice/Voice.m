@@ -168,9 +168,8 @@
                 [self.recognitionRequest appendAudioPCMBuffer:buffer];
             }
         }];
-    } @catch (NSException *exception) {
-        NSString* errorText = @"start_recording";
-        [self sendResult:@{@"code": @"start_recording"} :nil :nil :nil];
+    } @catch (NSException *exception) {     
+        [self sendResult:@{@"code": @"start_recording", @"message": [exception reason]} :nil :nil :nil];
         [self teardown];
         return;
     } @finally {}
@@ -228,13 +227,14 @@
     // End recognition request
     [self.recognitionRequest endAudio];
     
+    // Remove tap on bus (untested)
+    [self.audioEngine.inputNode removeTapOnBus:0];
+
     if (self.audioEngine.isRunning) {
         [self.audioEngine stop];
         [self.audioEngine.inputNode reset];
     }
-
-    // Remove tap on bus (experimental)
-    [self.audioEngine.inputNode removeTapOnBus:0];
+    
     
     self.recognitionRequest = nil;
     self.isTearingDown = NO;
@@ -331,7 +331,8 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
     }];
 }
 
-// Used to control the audio category in case the user loads audio through a different audio library while speech recognition may be initializing
+// Used to control the audio category in case the user loads audio 
+// through a different audio library while speech recognition may be initializing
 // Credits: react-native-sound
 RCT_EXPORT_METHOD(setCategory:(NSString *)categoryName
                   mixWithOthers:(BOOL)mixWithOthers) {
