@@ -13,6 +13,7 @@
 @property (nonatomic) AVAudioEngine* audioEngine;
 @property (nonatomic) SFSpeechRecognitionTask* recognitionTask;
 @property (nonatomic) AVAudioSession* audioSession;
+@property (nonatomic) NSString *sessionId;
 /** Previous category the user was on prior to starting speech recognition */
 @property (nonatomic) NSString* priorAudioCategory;
 
@@ -79,14 +80,17 @@
         [self.audioSession setCategory:self.priorAudioCategory withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker error: nil];
     }
     // Set audio session to inactive and notify other sessions
-    [self.audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error: nil];
+    // [self.audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error: nil];
     // Remove pointer reference
     self.audioSession = nil;
+    // Reset session
+    self.sessionId = nil;
 }
 
 - (void) setupAndStartRecognizing:(NSString*)localeStr {
     self.audioSession = [AVAudioSession sharedInstance];
     self.priorAudioCategory = [self.audioSession category];
+    self.sessionId = [[NSUUID UUID] UUIDString];
     
     // Tear down resources before starting speech recognition..
     [self teardown];
@@ -127,13 +131,19 @@
     if (inputNode == nil) {
         [self sendResult:@{@"code": @"input"} :nil :nil :nil];
         return;
-    }    
+    }
     
-    [self sendEventWithName:@"onSpeechStart" body:nil];    
+    [self sendEventWithName:@"onSpeechStart" body:nil];
+    
     
     // A recognition task represents a speech recognition session.
     // We keep a reference to the task so that it can be cancelled.
+    NSString *taskSessionId = self.sessionId;
     self.recognitionTask = [self.speechRecognizer recognitionTaskWithRequest:self.recognitionRequest resultHandler:^(SFSpeechRecognitionResult * _Nullable result, NSError * _Nullable error) {
+        if (![taskSessionId isEqualToString:self.sessionId]) {
+            // session ID has changed, so ignore any capture results and error
+            return;
+        }
         if (error != nil) {
             NSString *errorMessage = [NSString stringWithFormat:@"%ld/%@", error.code, [error localizedDescription]];
             [self sendResult:@{@"code": @"recognition_fail", @"message": errorMessage} :nil :nil :nil];
@@ -160,20 +170,24 @@
     }];
     
     AVAudioFormat* recordingFormat = [inputNode outputFormatForBus:0];
+    AVAudioMixerNode *mixer = [[AVAudioMixerNode alloc] init];
+    [self.audioEngine attachNode:mixer];
     
-    // Start recording
+    // Start recording and append recording buffer to speech recognizer
     @try {
-        [inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
+        [mixer installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
+            // Todo: write recording buffer to file (if user opts in)
             if (self.recognitionRequest != nil) {
                 [self.recognitionRequest appendAudioPCMBuffer:buffer];
             }
         }];
-    } @catch (NSException *exception) {     
+    } @catch (NSException *exception) {
         [self sendResult:@{@"code": @"start_recording", @"message": [exception reason]} :nil :nil :nil];
         [self teardown];
         return;
     } @finally {}
     
+    [self.audioEngine connect:inputNode to:mixer format:recordingFormat];
     [self.audioEngine prepare];
     NSError* audioSessionError = nil;
     [self.audioEngine startAndReturnError:&audioSessionError];
@@ -210,7 +224,7 @@
     } else if (transcriptions != nil) {
         [self sendEventWithName:@"onSpeechPartialResults" body:@{@"value":transcriptions} ];
     }
-
+    
     if ([isFinal boolValue] == YES) {
         [self sendEventWithName:@"onSpeechRecognized" body: @{@"isFinal": isFinal}];
     }
@@ -223,18 +237,20 @@
     
     // Set back audio session category
     [self resetAudioSession];
-
+    
     // End recognition request
     [self.recognitionRequest endAudio];
     
-    // Remove tap on bus (untested)
+    // Remove tap on bus
     [self.audioEngine.inputNode removeTapOnBus:0];
-
+    [self.audioEngine.inputNode reset];
+    
+    // Stop audio engine and dereference it for re-allocation
     if (self.audioEngine.isRunning) {
         [self.audioEngine stop];
-        [self.audioEngine.inputNode reset];
+        [self.audioEngine reset];
+        self.audioEngine = nil;
     }
-    
     
     self.recognitionRequest = nil;
     self.isTearingDown = NO;
@@ -302,7 +318,7 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
-    if (self.recognitionTask != nil) {
+    if (self.sessionId != nil) {
         reject(@"recognizer_busy", @"Speech recognition already started!", nil);
         return;
     }
@@ -331,7 +347,7 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
     }];
 }
 
-// Used to control the audio category in case the user loads audio 
+// Used to control the audio category in case the user loads audio
 // through a different audio library while speech recognition may be initializing
 // Credits: react-native-sound
 RCT_EXPORT_METHOD(setCategory:(NSString *)categoryName
