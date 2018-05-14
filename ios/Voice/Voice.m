@@ -72,7 +72,15 @@
     }
     NSString* audioCategory = [self.audioSession category];
     // Category hasn't changed -- do nothing
-    if ([self.priorAudioCategory isEqualToString:audioCategory]) return;
+    // if ([self.priorAudioCategory isEqualToString:audioCategory]) return;
+    // Current audio category doesn't contain "Record" -- do nothing
+    if ([self.priorAudioCategory rangeOfString:@"Record"].location == NSNotFound) {
+        return;
+    } else {
+        // Prior category is either "PlayAndRecord" or "Record". Revert to "Ambient" as default
+        self.priorAudioCategory = AVAudioSessionCategoryAmbient;
+    };
+    
     // Reset back to the previous category
     if ([self isHeadsetPluggedIn] || [self isHeadSetBluetooth]) {
         [self.audioSession setCategory:self.priorAudioCategory withOptions:AVAudioSessionCategoryOptionAllowBluetooth error: nil];
