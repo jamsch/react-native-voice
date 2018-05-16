@@ -152,7 +152,7 @@
             return;
         }
      
-        // No result
+        // No result.
         if (result == nil) {
             [self sendEventWithName:@"onSpeechEnd" body:nil];
             [self teardown];
@@ -168,6 +168,7 @@
         
         [self sendResult :nil :result.bestTranscription.formattedString :transcriptionDics :[NSNumber numberWithBool:isFinal]];
         
+        // Todo: implement opt-in for disabling teardown so more speech results will be gathered
         if (isFinal || self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
             [self sendEventWithName:@"onSpeechEnd" body:nil];
             [self teardown];
@@ -189,6 +190,7 @@
             }
         }];
     } @catch (NSException *exception) {
+        NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
         [self sendResult:@{@"code": @"start_recording", @"message": [exception reason]} :nil :nil :nil];
         [self teardown];
         return;
@@ -315,7 +317,7 @@ RCT_EXPORT_METHOD(isRecognizing:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
 }
 
 RCT_EXPORT_METHOD(isReady:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
-    if (self.isTearingDown || self.recognitionTask != nil) {
+    if (self.isTearingDown || self.sessionId != nil) {
         resolve(@false);
         return;
     }
