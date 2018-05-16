@@ -70,38 +70,28 @@
     if (self.audioSession == nil) {
         self.audioSession = [AVAudioSession sharedInstance];
     }
+    // Set audio session to inactive and notify other sessions
+    // [self.audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error: nil];
     NSString* audioCategory = [self.audioSession category];
     // Category hasn't changed -- do nothing
-    // if ([self.priorAudioCategory isEqualToString:audioCategory]) return;
-    // Current audio category doesn't contain "Record" -- do nothing
-    if ([self.priorAudioCategory rangeOfString:@"Record"].location == NSNotFound) {
-        return;
-    } else {
-        // Prior category is either "PlayAndRecord" or "Record". Revert to "Ambient" as default
-        self.priorAudioCategory = AVAudioSessionCategoryAmbient;
-    };
-    
+    if ([self.priorAudioCategory isEqualToString:audioCategory]) return;
     // Reset back to the previous category
     if ([self isHeadsetPluggedIn] || [self isHeadSetBluetooth]) {
         [self.audioSession setCategory:self.priorAudioCategory withOptions:AVAudioSessionCategoryOptionAllowBluetooth error: nil];
     } else {
         [self.audioSession setCategory:self.priorAudioCategory withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker error: nil];
     }
-    // Set audio session to inactive and notify other sessions
-    // [self.audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error: nil];
     // Remove pointer reference
     self.audioSession = nil;
-    // Reset session
-    self.sessionId = nil;
 }
 
 - (void) setupAndStartRecognizing:(NSString*)localeStr {
     self.audioSession = [AVAudioSession sharedInstance];
     self.priorAudioCategory = [self.audioSession category];
-    self.sessionId = [[NSUUID UUID] UUIDString];
-    
     // Tear down resources before starting speech recognition..
     [self teardown];
+    
+    self.sessionId = [[NSUUID UUID] UUIDString];
     
     NSLocale* locale = nil;
     if ([localeStr length] > 0) {
@@ -128,6 +118,7 @@
     
     if (self.recognitionRequest == nil) {
         [self sendResult:@{@"code": @"recognition_init"} :nil :nil :nil];
+        [self teardown];
         return;
     }
     
@@ -138,6 +129,7 @@
     AVAudioInputNode* inputNode = self.audioEngine.inputNode;
     if (inputNode == nil) {
         [self sendResult:@{@"code": @"input"} :nil :nil :nil];
+        [self teardown];
         return;
     }
     
@@ -150,6 +142,7 @@
     self.recognitionTask = [self.speechRecognizer recognitionTaskWithRequest:self.recognitionRequest resultHandler:^(SFSpeechRecognitionResult * _Nullable result, NSError * _Nullable error) {
         if (![taskSessionId isEqualToString:self.sessionId]) {
             // session ID has changed, so ignore any capture results and error
+            [self teardown];
             return;
         }
         if (error != nil) {
@@ -158,23 +151,29 @@
             [self teardown];
             return;
         }
+     
+        // No result
+        if (result == nil) {
+            [self sendEventWithName:@"onSpeechEnd" body:nil];
+            [self teardown];
+            return;
+        }
         
         BOOL isFinal = result.isFinal;
-        if (result != nil) {
-            NSMutableArray* transcriptionDics = [NSMutableArray new];
-            for (SFTranscription* transcription in result.transcriptions) {
-                [transcriptionDics addObject:transcription.formattedString];
-            }
-            
-            [self sendResult :nil :result.bestTranscription.formattedString :transcriptionDics :[NSNumber numberWithBool:isFinal]];
+        
+        NSMutableArray* transcriptionDics = [NSMutableArray new];
+        for (SFTranscription* transcription in result.transcriptions) {
+            [transcriptionDics addObject:transcription.formattedString];
         }
         
-        if (isFinal) {
-            if (self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
-                [self sendEventWithName:@"onSpeechEnd" body:nil];
-            }
+        [self sendResult :nil :result.bestTranscription.formattedString :transcriptionDics :[NSNumber numberWithBool:isFinal]];
+        
+        if (isFinal || self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
+            [self sendEventWithName:@"onSpeechEnd" body:nil];
             [self teardown];
+            return;
         }
+        
     }];
     
     AVAudioFormat* recordingFormat = [inputNode outputFormatForBus:0];
@@ -261,6 +260,7 @@
     }
     
     self.recognitionRequest = nil;
+    self.sessionId = nil;
     self.isTearingDown = NO;
 }
 
