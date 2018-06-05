@@ -1,6 +1,7 @@
 #import "Voice.h"
 #import <React/RCTLog.h>
 #import <UIKit/UIKit.h>
+#import <React/RCTConvert.h>
 #import <React/RCTUtils.h>
 #import <React/RCTEventEmitter.h>
 #import <Speech/Speech.h>
@@ -341,6 +342,9 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
         return;
     };
     
+    self.continuous = [RCTConvert BOOL:options[@"continuous"]];
+    NSLog(@"[Continuous] - %@", self.continuous);
+    
     [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
         switch (status) {
             case SFSpeechRecognizerAuthorizationStatusNotDetermined:
@@ -352,12 +356,11 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
             case SFSpeechRecognizerAuthorizationStatusRestricted:
                 reject(@"restricted", @"Speech recognition restricted on this device", nil);
                 return;
-            case SFSpeechRecognizerAuthorizationStatusAuthorized:
-                BOOL *continuous = [RCTConvert BOOL:options[@"continuous"]];
-                self.continuous = continuous;
+            case SFSpeechRecognizerAuthorizationStatusAuthorized: {
                 [self setupAndStartRecognizing:localeStr];
                 resolve(nil);
                 return;
+            }
         }
     }];
 }
