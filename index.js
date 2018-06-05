@@ -1,10 +1,10 @@
-import React from "react";
-import { NativeModules, NativeEventEmitter, Platform, PermissionsAndroid } from "react-native";
+import React from 'react';
+import { NativeModules, NativeEventEmitter, Platform, PermissionsAndroid } from 'react-native';
 
 const { Voice } = NativeModules;
 
 // NativeEventEmitter is only availabe on React Native platforms, so this conditional is used to avoid import conflicts in the browser/server
-const voiceEmitter = Platform.OS !== "web" ? new NativeEventEmitter(Voice) : null;
+const voiceEmitter = Platform.OS !== 'web' ? new NativeEventEmitter(Voice) : null;
 
 class RCTVoice {
   constructor() {
@@ -22,12 +22,12 @@ class RCTVoice {
   }
 
   rationale = {
-    title: "Microphone Permission",
-    message: "This app would like access to use your microphone."
+    title: 'Microphone Permission',
+    message: 'This app would like access to use your microphone.'
   };
 
   defaultSpeechOptionsAndroid = {
-    EXTRA_LANGUAGE_MODEL: "LANGUAGE_MODEL_FREE_FORM",
+    EXTRA_LANGUAGE_MODEL: 'LANGUAGE_MODEL_FREE_FORM',
     EXTRA_MAX_RESULTS: 5,
     EXTRA_PARTIAL_RESULTS: true,
     REQUEST_PERMISSIONS_AUTO: true
@@ -86,7 +86,7 @@ class RCTVoice {
    * Returns true if the user provided permissions
    */
   async requestPermissionsAndroid() {
-    if (Platform.OS !== "android") {
+    if (Platform.OS !== 'android') {
       return true;
     }
 
@@ -105,19 +105,19 @@ class RCTVoice {
     }
 
     switch (Platform.OS) {
-      case "ios":
-        return await Voice.startSpeech(locale);
-      case "android":
+      case 'ios':
+        return await Voice.startSpeech(locale, { continuous: Boolean(options.continuous) });
+      case 'android':
         // Returns "true" if the user already has permissions
         const hasPermissions = await this.requestPermissionsAndroid();
         if (!hasPermissions) {
-          throw { code: "permissions" };
+          throw { code: 'permissions' };
         }
 
         // Checks whether speech recognition is available on the device
         const isAvailable = await this.isAvailable();
         if (!isAvailable) {
-          throw { code: "not_available" };
+          throw { code: 'not_available' };
         }
 
         // Start speech recognition
@@ -128,7 +128,7 @@ class RCTVoice {
         return await Voice.startSpeech(locale, speechOptions);
       default:
         // Non-android & iOS devices are not supported
-        throw { code: "not_available" };
+        throw { code: 'not_available' };
     }
   }
 
@@ -162,7 +162,7 @@ class RCTVoice {
    * (iOS) Verifies that voice recognition is ready to be used
    */
   async isReady() {
-    if (Platform.OS !== "ios") {
+    if (Platform.OS !== 'ios') {
       return true;
     }
     return await Voice.isReady();
@@ -174,7 +174,7 @@ class RCTVoice {
    * @param {boolean} mixWithOthers Enables: "AVAudioSessionCategoryOptionMixWithOthers"
    */
   setCategory(category, mixWithOthers = false) {
-    if (Platform.OS !== "ios") return;
+    if (Platform.OS !== 'ios') return;
     Voice.setCategory(category, mixWithOthers);
   }
 
