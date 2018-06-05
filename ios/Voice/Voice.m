@@ -8,6 +8,7 @@
 @interface Voice () <SFSpeechRecognizerDelegate>
 /** Whether speech recognition is finishing.. */
 @property (nonatomic) BOOL isTearingDown;
+@property (nonatomic) BOOL continuous;
 @property (nonatomic) SFSpeechRecognizer* speechRecognizer;
 @property (nonatomic) SFSpeechAudioBufferRecognitionRequest* recognitionRequest;
 @property (nonatomic) AVAudioEngine* audioEngine;
@@ -165,7 +166,9 @@
             if (self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
                 [self sendEventWithName:@"onSpeechEnd" body:nil];
             }
-            [self teardown];
+            if (!self.continuous) {
+                [self teardown];
+            }
         }
     }];
     
@@ -315,6 +318,7 @@ RCT_EXPORT_METHOD(isReady:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRe
 }
 
 RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
+                  options:(NSDictionary *)options
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
@@ -340,6 +344,8 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
                 reject(@"restricted", @"Speech recognition restricted on this device", nil);
                 return;
             case SFSpeechRecognizerAuthorizationStatusAuthorized:
+                BOOL *continuous = [RCTConvert BOOL:options[@"continuous"]];
+                self.continuous = continuous;
                 [self setupAndStartRecognizing:localeStr];
                 resolve(nil);
                 return;
