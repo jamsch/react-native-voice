@@ -156,7 +156,6 @@
      
         // No result.
         if (result == nil) {
-            [self sendEventWithName:@"onSpeechEnd" body:nil];
             [self teardown];
             return;
         }
@@ -171,7 +170,6 @@
         [self sendResult :nil :result.bestTranscription.formattedString :transcriptionDics :[NSNumber numberWithBool:isFinal]];
         
         if (isFinal || self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
-            [self sendEventWithName:@"onSpeechEnd" body:nil];
             if (!self.continuous) {
                 [self teardown];
             }
@@ -267,6 +265,9 @@
     self.recognitionRequest = nil;
     self.sessionId = nil;
     self.isTearingDown = NO;
+
+    // Emit onSpeechEnd event
+    [self sendEventWithName:@"onSpeechEnd" body:nil];
 }
 
 // Called when the availability of the given recognizer changes
@@ -342,8 +343,13 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
         return;
     };
     
-    self.continuous = [RCTConvert BOOL:options[@"continuous"]];
-    NSLog(@"[Continuous] - %@", self.continuous);
+    // Start recording and append recording buffer to speech recognizer
+    @try {
+        self.continuous = [RCTConvert BOOL:options[@"continuous"]];
+    } @catch (NSException *exception) {
+        NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
+        self.continuous = false;
+    } @finally {}
     
     [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
         switch (status) {
