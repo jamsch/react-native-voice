@@ -1,6 +1,7 @@
 #import "Voice.h"
 #import <React/RCTLog.h>
 #import <UIKit/UIKit.h>
+#import <React/RCTConvert.h>
 #import <React/RCTUtils.h>
 #import <React/RCTEventEmitter.h>
 #import <Speech/Speech.h>
@@ -71,6 +72,8 @@
     if (self.audioSession == nil) {
         self.audioSession = [AVAudioSession sharedInstance];
     }
+    // Set audio session to inactive and notify other sessions
+    // [self.audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error: nil];
     NSString* audioCategory = [self.audioSession category];
     // Category hasn't changed -- do nothing
     if ([self.priorAudioCategory isEqualToString:audioCategory]) return;
@@ -80,21 +83,17 @@
     } else {
         [self.audioSession setCategory:self.priorAudioCategory withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker error: nil];
     }
-    // Set audio session to inactive and notify other sessions
-    // [self.audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error: nil];
     // Remove pointer reference
     self.audioSession = nil;
-    // Reset session
-    self.sessionId = nil;
 }
 
 - (void) setupAndStartRecognizing:(NSString*)localeStr {
     self.audioSession = [AVAudioSession sharedInstance];
     self.priorAudioCategory = [self.audioSession category];
-    self.sessionId = [[NSUUID UUID] UUIDString];
-    
     // Tear down resources before starting speech recognition..
     [self teardown];
+    
+    self.sessionId = [[NSUUID UUID] UUIDString];
     
     NSLocale* locale = nil;
     if ([localeStr length] > 0) {
@@ -121,6 +120,7 @@
     
     if (self.recognitionRequest == nil) {
         [self sendResult:@{@"code": @"recognition_init"} :nil :nil :nil];
+        [self teardown];
         return;
     }
     
@@ -131,11 +131,11 @@
     AVAudioInputNode* inputNode = self.audioEngine.inputNode;
     if (inputNode == nil) {
         [self sendResult:@{@"code": @"input"} :nil :nil :nil];
+        [self teardown];
         return;
     }
     
     [self sendEventWithName:@"onSpeechStart" body:nil];
-    
     
     // A recognition task represents a speech recognition session.
     // We keep a reference to the task so that it can be cancelled.
@@ -143,6 +143,7 @@
     self.recognitionTask = [self.speechRecognizer recognitionTaskWithRequest:self.recognitionRequest resultHandler:^(SFSpeechRecognitionResult * _Nullable result, NSError * _Nullable error) {
         if (![taskSessionId isEqualToString:self.sessionId]) {
             // session ID has changed, so ignore any capture results and error
+            [self teardown];
             return;
         }
         if (error != nil) {
@@ -151,25 +152,21 @@
             [self teardown];
             return;
         }
-        
-        BOOL isFinal = result.isFinal;
-        if (result != nil) {
+     
+        if (result != nil) {       
+            BOOL isFinal = result.isFinal;
+            
             NSMutableArray* transcriptionDics = [NSMutableArray new];
             for (SFTranscription* transcription in result.transcriptions) {
                 [transcriptionDics addObject:transcription.formattedString];
             }
             
-            [self sendResult :nil :result.bestTranscription.formattedString :transcriptionDics :[NSNumber numberWithBool:isFinal]];
+            [self sendResult :nil :result.bestTranscription.formattedString :transcriptionDics :[NSNumber numberWithBool:isFinal]];                
         }
         
-        if (isFinal) {
-            if (self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
-                [self sendEventWithName:@"onSpeechEnd" body:nil];
-            }
-            if (!self.continuous) {
-                [self teardown];
-            }
-        }
+        if ((isFinal && !self.continuous) || self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
+            [self teardown];
+        }        
     }];
     
     AVAudioFormat* recordingFormat = [inputNode outputFormatForBus:0];
@@ -185,6 +182,7 @@
             }
         }];
     } @catch (NSException *exception) {
+        NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
         [self sendResult:@{@"code": @"start_recording", @"message": [exception reason]} :nil :nil :nil];
         [self teardown];
         return;
@@ -256,7 +254,11 @@
     }
     
     self.recognitionRequest = nil;
+    self.sessionId = nil;
     self.isTearingDown = NO;
+
+    // Emit onSpeechEnd event
+    [self sendEventWithName:@"onSpeechEnd" body:nil];
 }
 
 // Called when the availability of the given recognizer changes
@@ -310,7 +312,7 @@ RCT_EXPORT_METHOD(isRecognizing:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
 }
 
 RCT_EXPORT_METHOD(isReady:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
-    if (self.isTearingDown || self.recognitionTask != nil) {
+    if (self.isTearingDown || self.sessionId != nil) {
         resolve(@false);
         return;
     }
@@ -332,6 +334,14 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
         return;
     };
     
+    // Start recording and append recording buffer to speech recognizer
+    @try {
+        self.continuous = [RCTConvert BOOL:options[@"continuous"]];
+    } @catch (NSException *exception) {
+        NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
+        self.continuous = false;
+    } @finally {}
+    
     [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
         switch (status) {
             case SFSpeechRecognizerAuthorizationStatusNotDetermined:
@@ -344,11 +354,10 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
                 reject(@"restricted", @"Speech recognition restricted on this device", nil);
                 return;
             case SFSpeechRecognizerAuthorizationStatusAuthorized:
-                BOOL *continuous = [RCTConvert BOOL:options[@"continuous"]];
-                self.continuous = continuous;
                 [self setupAndStartRecognizing:localeStr];
                 resolve(nil);
                 return;
+            }
         }
     }];
 }
