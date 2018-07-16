@@ -181,6 +181,7 @@ Usage: `Voice.start(locale: string, options: {})`
 | `EXTRA_MAX_RESULTS`: number                                       | Optional limit on the maximum number of results to return. If omitted the recognizer will choose how many results to return                                                                               | `5`                          | Android  |
 | `EXTRA_PARTIAL_RESULTS`: boolean                                  | Optional boolean to indicate whether partial results should be returned by the recognizer as the user speaks                                                                                              | `true`                       | Android  |
 | `EXTRA_SPEECH_INPUT_COMPLETE_`<br>`SILENCE_LENGTH_MILLIS`: number | The amount of time that it should take after we stop hearing speech to consider the input complete.                                                                                                       | not set                      | Android  |
+| `EXTRA_SPEECH_INPUT_MINIMUM_`<br>`LENGTH_MILLIS`: number | The minimum length of an utterance                                                           | not set                      | Android  |
 | `continous`: boolean                                              | Enables continuous speech recognition                                                                                                                                                                     | `false`                      | iOS      |
 
 ## Events
