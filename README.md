@@ -226,7 +226,7 @@ This applies to `Voice.onSpeechError(e)` and when `await Voice.start()` throws a
 | `audio`            | Audio engine / Audio session error                              | Android, iOS |
 | `network`          | Network error                                                   | Android      |
 | `network_timeout`  | Network timeout error                                           | Android      |
-| `speech_timeout`   | Speech ios apprecognition timeout                               | Android      |
+| `speech_timeout`   | Speech recognition timeout                                      | Android      |
 | `no_match`         | No recognition matches                                          | Android      |
 | `server`           | Server error                                                    | Android      |
 | `restricted`       | Speech recognition is restricted                                | iOS          |
