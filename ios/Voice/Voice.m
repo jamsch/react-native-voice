@@ -142,7 +142,7 @@
     NSString *taskSessionId = self.sessionId;
     self.recognitionTask = [self.speechRecognizer recognitionTaskWithRequest:self.recognitionRequest resultHandler:^(SFSpeechRecognitionResult * _Nullable result, NSError * _Nullable error) {
         if (![taskSessionId isEqualToString:self.sessionId]) {
-            // session ID has changed, so ignore any capture results and error
+            // Session ID has changed, so ignore any capture results and error
             [self teardown];
             return;
         }
@@ -153,9 +153,9 @@
             return;
         }
      
-        if (result != nil) {       
-            BOOL isFinal = result.isFinal;
-            
+        BOOL isFinal = result.isFinal;
+        
+        if (result != nil) {
             NSMutableArray* transcriptionDics = [NSMutableArray new];
             for (SFTranscription* transcription in result.transcriptions) {
                 [transcriptionDics addObject:transcription.formattedString];
@@ -164,6 +164,7 @@
             [self sendResult :nil :result.bestTranscription.formattedString :transcriptionDics :[NSNumber numberWithBool:isFinal]];                
         }
         
+        // Finish speech recognition
         if ((isFinal && !self.continuous) || self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
             [self teardown];
         }        
