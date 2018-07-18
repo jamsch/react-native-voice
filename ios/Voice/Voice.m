@@ -357,7 +357,6 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
                 [self setupAndStartRecognizing:localeStr];
                 resolve(nil);
                 return;
-            }
         }
     }];
 }
