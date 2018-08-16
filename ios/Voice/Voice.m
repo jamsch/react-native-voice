@@ -16,8 +16,13 @@
 @property (nonatomic) SFSpeechRecognitionTask* recognitionTask;
 @property (nonatomic) AVAudioSession* audioSession;
 @property (nonatomic) NSString *sessionId;
+// Recording options
+@property (nonatomic) AVAudioFile *outputFile;
+@property (nonatomic) BOOL recordingEnabled;
+@property (nonatomic) NSString *recordingFileName;
 /** Previous category the user was on prior to starting speech recognition */
-@property (nonatomic) NSString* priorAudioCategory;
+@property (nonatomic) NSString *priorAudioCategory;
+
 
 @end
 
@@ -69,8 +74,11 @@
 }
 
 -(void) resetAudioSession {
-    if (self.audioSession == nil) {
+    if (!self.audioSession) {
         self.audioSession = [AVAudioSession sharedInstance];
+    }
+    if (!self.priorAudioCategory) {
+        self.priorAudioCategory = self.audioSession;
     }
     // Set audio session to inactive and notify other sessions
     // [self.audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error: nil];
@@ -173,14 +181,30 @@
     AVAudioFormat* recordingFormat = [inputNode outputFormatForBus:0];
     AVAudioMixerNode *mixer = [[AVAudioMixerNode alloc] init];
     [self.audioEngine attachNode:mixer];
+
+    if (self.recordingEnabled) {
+        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);  
+        NSString *documentsPath = [paths objectAtIndex:0]; //Get the docs directory 
+        NSURL *fileURL = [documentsPath URLByAppendingPathComponent:@"output.m4a"];
+        // Re-allocate output file
+        self.outputFile = [[AVAudioFile alloc] initForWriting:fileURL settings:recordSettings error:nil];
+    }
     
     // Start recording and append recording buffer to speech recognizer
     @try {
         [mixer installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
             // Todo: write recording buffer to file (if user opts in)
-            if (self.recognitionRequest != nil) {
+            if (self.recognitionRequest) {
                 [self.recognitionRequest appendAudioPCMBuffer:buffer];
             }
+
+            @try {
+                if (self.recordingEnabled && self.outputFile) {
+                    [self.outputFile writeFromBuffer:buffer error:nil]
+                }
+            } @catch (NSException *exception) {
+                NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
+            } @finally {}
         }];
     } @catch (NSException *exception) {
         NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
@@ -234,24 +258,32 @@
 
 - (void) teardown {
     self.isTearingDown = YES;
-    [self.recognitionTask cancel];
-    self.recognitionTask = nil;
+    if (self.recognitionTask) {
+        [self.recognitionTask cancel];
+        self.recognitionTask = nil;
+    }
     
     // Set back audio session category
     [self resetAudioSession];
     
     // End recognition request
-    [self.recognitionRequest endAudio];
+    if (self.recognitionRequest) {
+        [self.recognitionRequest endAudio];
+    }
     
     // Remove tap on bus
-    [self.audioEngine.inputNode removeTapOnBus:0];
-    [self.audioEngine.inputNode reset];
-    
-    // Stop audio engine and dereference it for re-allocation
-    if (self.audioEngine.isRunning) {
-        [self.audioEngine stop];
-        [self.audioEngine reset];
-        self.audioEngine = nil;
+    if (self.audioEngine) {
+        if (self.audioEngine.inputNode) {
+            [self.audioEngine.inputNode removeTapOnBus:0];
+            [self.audioEngine.inputNode reset];
+        }
+        
+        // Stop audio engine and dereference it for re-allocation
+        if (self.audioEngine.isRunning) {
+            [self.audioEngine stop];
+            [self.audioEngine reset];
+            self.audioEngine = nil;
+        }
     }
     
     self.recognitionRequest = nil;
@@ -314,10 +346,10 @@ RCT_EXPORT_METHOD(isRecognizing:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
 
 RCT_EXPORT_METHOD(isReady:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
     if (self.isTearingDown || self.sessionId != nil) {
-        resolve(@false);
+        resolve(@NO);
         return;
     }
-    resolve(@true);
+    resolve(@YES);
 }
 
 RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
@@ -335,12 +367,18 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
         return;
     };
     
-    // Start recording and append recording buffer to speech recognizer
+    // Configure speech recognition options
     @try {
-        self.continuous = [RCTConvert BOOL:options[@"continuous"]];
+        if ([options objectForKey:@"continuous"]) {
+            self.continuous = [RCTConvert BOOL:options[@"continuous"]];
+        }
+        if ([options objectForKey:@"recordingEnabled"]) {
+            self.recordingEnabled = [RCTConvert BOOL:options[@"recordingEnabled"]];
+        }
     } @catch (NSException *exception) {
         NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
         self.continuous = false;
+        self.recordingEnabled = false;
     } @finally {}
     
     [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
