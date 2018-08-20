@@ -73,12 +73,22 @@
     return YES;
 }
 
+-(NSURL *)applicationDocumentsDirectory {
+    NSString *documentsDirectory;
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    if ([paths count] > 0) {
+        documentsDirectory = [paths objectAtIndex:0];
+    }
+    // Important that we use fileURLWithPath and not URLWithString (see NSURL class reference, Apple Developer Site)
+    return [NSURL fileURLWithPath:documentsDirectory];
+}
+
 -(void) resetAudioSession {
     if (!self.audioSession) {
         self.audioSession = [AVAudioSession sharedInstance];
     }
     if (!self.priorAudioCategory) {
-        self.priorAudioCategory = self.audioSession;
+        self.priorAudioCategory = [self.audioSession category];
     }
     // Set audio session to inactive and notify other sessions
     // [self.audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error: nil];
@@ -183,11 +193,14 @@
     [self.audioEngine attachNode:mixer];
 
     if (self.recordingEnabled) {
-        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);  
-        NSString *documentsPath = [paths objectAtIndex:0]; //Get the docs directory 
-        NSURL *fileURL = [documentsPath URLByAppendingPathComponent:@"output.m4a"];
+        NSURL *fileURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:@"output.m4a"  isDirectory:NO];
         // Re-allocate output file
-        self.outputFile = [[AVAudioFile alloc] initForWriting:fileURL settings:recordSettings error:nil];
+        NSError* recordError = nil;
+        self.outputFile = [[AVAudioFile alloc] initForWriting:fileURL settings:[[mixer outputFormatForBus:0] settings] error:&recordError];
+        if (recordError != nil) {
+            [self teardown];
+            return;
+        }
     }
     
     // Start recording and append recording buffer to speech recognizer
@@ -200,7 +213,7 @@
 
             @try {
                 if (self.recordingEnabled && self.outputFile) {
-                    [self.outputFile writeFromBuffer:buffer error:nil]
+                    [self.outputFile writeFromBuffer:buffer error:nil];
                 }
             } @catch (NSException *exception) {
                 NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
