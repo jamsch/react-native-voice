@@ -188,20 +188,23 @@
         }        
     }];
     
-    AVAudioFormat* recordingFormat = [inputNode outputFormatForBus:0];
     AVAudioMixerNode *mixer = [[AVAudioMixerNode alloc] init];
-    [self.audioEngine attachNode:mixer];
+    AVAudioFormat* recordingFormat = [mixer outputFormatForBus:0];
 
     if (self.recordingEnabled) {
-        NSURL *fileURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:@"output.m4a"  isDirectory:NO];
+        NSURL *fileURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:@"output.wav"];
         // Re-allocate output file
         NSError* recordError = nil;
-        self.outputFile = [[AVAudioFile alloc] initForWriting:fileURL settings:[[mixer outputFormatForBus:0] settings] error:&recordError];
+        self.outputFile = [[AVAudioFile alloc] initForWriting:fileURL settings:recordingFormat.settings error:&recordError];
         if (recordError != nil) {
+            [self sendResult:@{@"code": @"record_error", @"message": [recordError localizedDescription], @"domain": [recordError domain]} :nil :nil :nil];
             [self teardown];
             return;
         }
     }
+    
+    
+    [self.audioEngine attachNode:mixer];
     
     // Start recording and append recording buffer to speech recognizer
     @try {
