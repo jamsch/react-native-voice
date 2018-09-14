@@ -336,7 +336,9 @@ RCT_EXPORT_METHOD(cancelSpeech:(RCTPromiseResolveBlock)resolve rejecter:(RCTProm
 }
 
 RCT_EXPORT_METHOD(destroySpeech:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
-    [self teardown];
+    if (self.sessionId) {
+        [self teardown];
+    }
     resolve(nil);
 }
 
