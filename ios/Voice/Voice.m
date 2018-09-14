@@ -159,12 +159,13 @@
     // We keep a reference to the task so that it can be cancelled.
     NSString *taskSessionId = self.sessionId;
     self.recognitionTask = [self.speechRecognizer recognitionTaskWithRequest:self.recognitionRequest resultHandler:^(SFSpeechRecognitionResult * _Nullable result, NSError * _Nullable error) {
-        if (![taskSessionId isEqualToString:self.sessionId]) {
-            // Session ID has changed, so ignore any capture results and error
+        // Check if Session ID has changed
+        if (taskSessionId && ![taskSessionId isEqualToString:self.sessionId]) {
             [self teardown];
             return;
         }
-        if (error != nil) {
+
+        if (error) {
             NSString *errorMessage = [NSString stringWithFormat:@"%ld/%@", error.code, [error localizedDescription]];
             [self sendResult:@{@"code": @"recognition_fail", @"message": errorMessage} :nil :nil :nil];
             [self teardown];
@@ -173,7 +174,7 @@
      
         BOOL isFinal = result.isFinal;
         
-        if (result != nil) {
+        if (result) {
             NSMutableArray* transcriptionDics = [NSMutableArray new];
             for (SFTranscription* transcription in result.transcriptions) {
                 [transcriptionDics addObject:transcription.formattedString];
@@ -185,7 +186,7 @@
         // Finish speech recognition
         if ((isFinal && !self.continuous) || self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
             [self teardown];
-        }        
+        }
     }];
     
     AVAudioMixerNode *mixer = [[AVAudioMixerNode alloc] init];
@@ -233,7 +234,7 @@
     [self.audioEngine prepare];
     NSError* audioSessionError = nil;
     [self.audioEngine startAndReturnError:&audioSessionError];
-    if (audioSessionError != nil) {
+    if (audioSessionError) {
         [self sendResult:@{@"code": @"audio", @"message": [audioSessionError localizedDescription]} :nil :nil :nil];
         [self teardown];
         return;
@@ -254,25 +255,30 @@
 }
 
 - (void) sendResult:(NSDictionary*)error :(NSString*)bestTranscription :(NSArray*)transcriptions :(NSNumber*)isFinal {
-    if (error != nil) {
+    if (error) {
         [self sendEventWithName:@"onSpeechError" body:error];
     }
-    if (bestTranscription != nil) {
-        if ([isFinal boolValue] == YES) {
+
+    if (bestTranscription) {
+        if ([isFinal boolValue]) {
             [self sendEventWithName:@"onSpeechResults" body:@{@"value":@[bestTranscription]} ];
         } else {
             [self sendEventWithName:@"onSpeechPartialResults" body:@{@"value":transcriptions} ];
         }
-    } else if (transcriptions != nil) {
+    } else if (transcriptions) {
         [self sendEventWithName:@"onSpeechPartialResults" body:@{@"value":transcriptions} ];
     }
     
-    if ([isFinal boolValue] == YES) {
+    if ([isFinal boolValue]) {
         [self sendEventWithName:@"onSpeechRecognized" body: @{@"isFinal": isFinal}];
     }
 }
 
 - (void) teardown {
+    // Prevent additional tear-down calls
+    if (self.isTearingDown) {
+        return;
+    }
     self.isTearingDown = YES;
     if (self.recognitionTask) {
         [self.recognitionTask cancel];
@@ -330,9 +336,7 @@ RCT_EXPORT_METHOD(cancelSpeech:(RCTPromiseResolveBlock)resolve rejecter:(RCTProm
 }
 
 RCT_EXPORT_METHOD(destroySpeech:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
-    if (!self.isTearingDown && self.sessionId != nil) {
-        [self teardown];
-    }
+    [self teardown];
     resolve(nil);
 }
 
