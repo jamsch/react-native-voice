@@ -276,7 +276,7 @@
 
 - (void) teardown {
     // Prevent additional tear-down calls
-    if (self.isTearingDown) {
+    if (self.isTearingDown || !self.sessionId) {
         return;
     }
     self.isTearingDown = YES;
@@ -336,9 +336,7 @@ RCT_EXPORT_METHOD(cancelSpeech:(RCTPromiseResolveBlock)resolve rejecter:(RCTProm
 }
 
 RCT_EXPORT_METHOD(destroySpeech:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
-    if (self.sessionId) {
-        [self teardown];
-    }
+    [self teardown];
     resolve(nil);
 }
 
