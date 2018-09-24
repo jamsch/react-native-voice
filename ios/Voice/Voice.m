@@ -297,6 +297,7 @@
     // End recognition request
     if (self.recognitionRequest) {
         [self.recognitionRequest endAudio];
+        self.recognitionRequest = nil;
     }
     
     // Remove tap on bus
@@ -314,7 +315,6 @@
         }
     }
     
-    self.recognitionRequest = nil;
     self.sessionId = nil;
     self.isTearingDown = NO;
 
