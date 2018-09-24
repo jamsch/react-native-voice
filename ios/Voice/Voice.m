@@ -53,6 +53,9 @@
 
 /** Returns "YES" if no errors had occurred */
 -(BOOL) setupAudioSession {
+    if (!self.audioSession) {
+        self.audioSession = [AVAudioSession sharedInstance];
+    }
     if ([self isHeadsetPluggedIn] || [self isHeadSetBluetooth]){
         [self.audioSession setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionAllowBluetooth error: nil];
     }
@@ -87,12 +90,15 @@
     if (!self.audioSession) {
         self.audioSession = [AVAudioSession sharedInstance];
     }
-    if (!self.priorAudioCategory) {
-        self.priorAudioCategory = [self.audioSession category];
-    }
+
     // Set audio session to inactive and notify other sessions
     // [self.audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error: nil];
     NSString* audioCategory = [self.audioSession category];
+
+    if (!self.priorAudioCategory) {
+        self.priorAudioCategory = audioCategory;
+    }
+
     // Category hasn't changed -- do nothing
     if ([self.priorAudioCategory isEqualToString:audioCategory]) return;
     // Reset back to the previous category
@@ -101,8 +107,6 @@
     } else {
         [self.audioSession setCategory:self.priorAudioCategory withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker error: nil];
     }
-    // Remove pointer reference
-    self.audioSession = nil;
 }
 
 - (void) setupAndStartRecognizing:(NSString*)localeStr {
@@ -184,7 +188,7 @@
         }
         
         // Finish speech recognition
-        if ((isFinal && !self.continuous) || self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
+        if ((isFinal && !self.continuous) || !self.recognitionTask || self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
             [self teardown];
         }
     }];
@@ -279,7 +283,9 @@
     if (self.isTearingDown || !self.sessionId) {
         return;
     }
+
     self.isTearingDown = YES;
+
     if (self.recognitionTask) {
         [self.recognitionTask cancel];
         self.recognitionTask = nil;
