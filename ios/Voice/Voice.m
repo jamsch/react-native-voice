@@ -201,31 +201,36 @@
         // Re-allocate output file
         NSError* recordError = nil;
         self.outputFile = [[AVAudioFile alloc] initForWriting:fileURL settings:recordingFormat.settings error:&recordError];
-        if (recordError != nil) {
+        if (recordError) {
             [self sendResult:@{@"code": @"record_error", @"message": [recordError localizedDescription], @"domain": [recordError domain]} :nil :nil :nil];
             [self teardown];
             return;
         }
     }
     
-    
     [self.audioEngine attachNode:mixer];
-    
-    // Start recording and append recording buffer to speech recognizer
+
+    // Start recording buffer
     @try {
+        // User opted for storing recording buffer to file
+        if (self.recordingEnabled && self.outputFile) {
+            [mixer installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
+                @try {
+                    if (self.recordingEnabled && self.outputFile) {
+                        [self.outputFile writeFromBuffer:buffer error:nil];
+                    }
+                } @catch (NSException *exception) {
+                    NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
+                } @finally {}
+            }
+        }
+
+        // Default: just append buffer to recognition request
         [mixer installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
             // Todo: write recording buffer to file (if user opts in)
             if (self.recognitionRequest) {
                 [self.recognitionRequest appendAudioPCMBuffer:buffer];
-            }
-
-            @try {
-                if (self.recordingEnabled && self.outputFile) {
-                    [self.outputFile writeFromBuffer:buffer error:nil];
-                }
-            } @catch (NSException *exception) {
-                NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
-            } @finally {}
+            }           
         }];
     } @catch (NSException *exception) {
         NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
@@ -310,7 +315,6 @@
         // Stop audio engine and dereference it for re-allocation
         if (self.audioEngine.isRunning) {
             [self.audioEngine stop];
-            [self.audioEngine reset];
             self.audioEngine = nil;
         }
     }
