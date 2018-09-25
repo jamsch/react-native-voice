@@ -222,7 +222,7 @@
                 } @catch (NSException *exception) {
                     NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
                 } @finally {}
-            }
+            }];
         }
 
         // Default: just append buffer to recognition request
