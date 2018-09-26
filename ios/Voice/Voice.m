@@ -9,7 +9,6 @@
 @interface Voice () <SFSpeechRecognizerDelegate>
 /** Whether speech recognition is finishing.. */
 @property (nonatomic) BOOL isTearingDown;
-@property (nonatomic) BOOL continuous;
 @property (nonatomic) SFSpeechRecognizer* speechRecognizer;
 @property (nonatomic) SFSpeechAudioBufferRecognitionRequest* recognitionRequest;
 @property (nonatomic) AVAudioEngine* audioEngine;
@@ -397,15 +396,11 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
     
     // Configure speech recognition options
     @try {
-        if ([options objectForKey:@"continuous"]) {
-            self.continuous = [RCTConvert BOOL:options[@"continuous"]];
-        }
         if ([options objectForKey:@"recordingEnabled"]) {
             self.recordingEnabled = [RCTConvert BOOL:options[@"recordingEnabled"]];
         }
     } @catch (NSException *exception) {
         NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
-        self.continuous = false;
         self.recordingEnabled = false;
     } @finally {}
     
