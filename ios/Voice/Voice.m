@@ -189,6 +189,10 @@
         
         // Finish speech recognition
         if (isFinal) {
+            if (self.recognitionTask) {
+                [self.recognitionTask cancel];
+            }
+            
             // End recognition request
             if (self.recognitionRequest) {
                 [self.recognitionRequest endAudio];
@@ -307,15 +311,9 @@
     }
 
     self.isTearingDown = YES;
-
-    if (self.recognitionTask) {
-        [self.recognitionTask cancel];
-    }
     
     // Set back audio session category
     [self resetAudioSession];
-    
- 
     
     self.sessionId = nil;
     self.isTearingDown = NO;
