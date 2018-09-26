@@ -188,7 +188,24 @@
         }
         
         // Finish speech recognition
-        if ((isFinal && !self.continuous) || !self.recognitionTask || self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
+        if (isFinal) {
+            // End recognition request
+            if (self.recognitionRequest) {
+                [self.recognitionRequest endAudio];
+            }
+            
+            // Remove tap on bus
+            if (self.audioEngine) {
+                // Stop audio engine and dereference it for re-allocation
+                if (self.audioEngine.isRunning) {
+                    [self.audioEngine stop];
+                }
+                if (self.audioEngine.inputNode) {
+                    [self.audioEngine.inputNode removeTapOnBus:0];
+                }
+            }
+            self.recognitionRequest = nil;
+            self.recognitionTask = nil;
             [self teardown];
         }
     }];
@@ -293,31 +310,12 @@
 
     if (self.recognitionTask) {
         [self.recognitionTask cancel];
-        self.recognitionTask = nil;
     }
     
     // Set back audio session category
     [self resetAudioSession];
     
-    // End recognition request
-    if (self.recognitionRequest) {
-        [self.recognitionRequest endAudio];
-        self.recognitionRequest = nil;
-    }
-    
-    // Remove tap on bus
-    if (self.audioEngine) {
-        if (self.audioEngine.inputNode) {
-            [self.audioEngine.inputNode removeTapOnBus:0];
-            [self.audioEngine.inputNode reset];
-        }
-        
-        // Stop audio engine and dereference it for re-allocation
-        if (self.audioEngine.isRunning) {
-            [self.audioEngine stop];
-            self.audioEngine = nil;
-        }
-    }
+ 
     
     self.sessionId = nil;
     self.isTearingDown = NO;
