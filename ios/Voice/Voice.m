@@ -55,7 +55,7 @@
     if (!self.audioSession) {
         self.audioSession = [AVAudioSession sharedInstance];
     }
-    if ([self isHeadsetPluggedIn] || [self isHeadSetBluetooth]){
+    if ([self isHeadsetPluggedIn] || [self isHeadSetBluetooth]) {
         [self.audioSession setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionAllowBluetooth error: nil];
     }
     else {
@@ -145,9 +145,7 @@
         return;
     }
     
-    if (self.audioEngine == nil) {
-        self.audioEngine = [[AVAudioEngine alloc] init];
-    }
+    self.audioEngine = [[AVAudioEngine alloc] init];
     
     AVAudioInputNode* inputNode = self.audioEngine.inputNode;
     if (inputNode == nil) {
@@ -188,27 +186,6 @@
         
         // Finish speech recognition
         if (isFinal) {
-            if (self.recognitionTask) {
-                [self.recognitionTask cancel];
-            }
-            
-            // End recognition request
-            if (self.recognitionRequest) {
-                [self.recognitionRequest endAudio];
-            }
-            
-            // Remove tap on bus
-            if (self.audioEngine) {
-                // Stop audio engine and dereference it for re-allocation
-                if (self.audioEngine.isRunning) {
-                    [self.audioEngine stop];
-                }
-                if (self.audioEngine.inputNode) {
-                    [self.audioEngine.inputNode removeTapOnBus:0];
-                }
-            }
-            self.recognitionRequest = nil;
-            self.recognitionTask = nil;
             [self teardown];
         }
     }];
@@ -313,6 +290,26 @@
     
     // Set back audio session category
     [self resetAudioSession];
+    
+    if (self.recognitionTask) {
+        [self.recognitionTask cancel];
+    }
+    
+    // End recognition request
+    if (self.recognitionRequest) {
+        [self.recognitionRequest endAudio];
+    }
+    
+    // Remove tap on bus
+    if (self.audioEngine) {
+        // Stop audio engine and dereference it for re-allocation
+        if (self.audioEngine.isRunning) {
+            [self.audioEngine stop];
+        }
+        if (self.audioEngine.inputNode) {
+            [self.audioEngine.inputNode removeTapOnBus:0];
+        }
+    }
     
     self.sessionId = nil;
     self.isTearingDown = NO;
