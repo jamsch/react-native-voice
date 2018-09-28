@@ -173,6 +173,7 @@ static AVAudioFrameCount const bufferSize = 1024;
         if (error) {
             [self sendResult:@{@"code": @"recognition_fail", @"message": [error localizedDescription]} :nil :nil :nil];
             [self stop];
+            [self reset];
             return;
         }
         
