@@ -406,9 +406,7 @@ RCT_EXPORT_METHOD(prepare:(NSString*)localeStr
     }
 }
 
-RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
-                  options:(NSDictionary *)options
-                  resolver:(RCTPromiseResolveBlock)resolve
+RCT_EXPORT_METHOD(startSpeech:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
     if (self.sessionId != nil) {
