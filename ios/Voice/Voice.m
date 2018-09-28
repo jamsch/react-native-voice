@@ -405,7 +405,7 @@ RCT_EXPORT_METHOD(prepare:(NSString*)localeStr
     } @finally {}
 }
 
-RCT_EXPORT_METHOD(start:(NSString*)localeStr
+RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
                   options:(NSDictionary *)options
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
