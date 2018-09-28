@@ -163,14 +163,14 @@ static AVAudioFrameCount const bufferSize = 1024;
     self.recognitionTask = [self.speechRecognizer recognitionTaskWithRequest:self.recognitionRequest resultHandler:^(SFSpeechRecognitionResult * _Nullable result, NSError * _Nullable error) {
         // Check if Session ID has changed
         if (taskSessionId && ![taskSessionId isEqualToString:self.sessionId]) {
-            [self teardown];
+            [self stop];
             return;
         }
 
         if (error) {
             NSString *errorMessage = [NSString stringWithFormat:@"%ld/%@", error.code, [error localizedDescription]];
             [self sendResult:@{@"code": @"recognition_fail", @"message": errorMessage} :nil :nil :nil];
-            [self teardown];
+            [self stop];
             return;
         }
      
@@ -236,7 +236,7 @@ static AVAudioFrameCount const bufferSize = 1024;
     } @catch (NSException *exception) {
         NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
         [self sendResult:@{@"code": @"start_recording", @"message": [exception reason]} :nil :nil :nil];
-        [self teardown];
+        [self stop];
         return;
     } @finally {}
     
@@ -246,7 +246,7 @@ static AVAudioFrameCount const bufferSize = 1024;
     [self.audioEngine startAndReturnError:&audioSessionError];
     if (audioSessionError) {
         [self sendResult:@{@"code": @"audio", @"message": [audioSessionError localizedDescription]} :nil :nil :nil];
-        [self teardown];
+        [self stop];
         return;
     }
 }
