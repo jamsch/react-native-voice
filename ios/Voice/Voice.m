@@ -432,7 +432,7 @@ RCT_EXPORT_METHOD(startSpeech:(RCTPromiseResolveBlock)resolve
                 reject(@"restricted", @"Speech recognition restricted on this device", nil);
                 return;
             case SFSpeechRecognizerAuthorizationStatusAuthorized:
-                [self startRecognizing:localeStr];
+                [self startRecognizing];
                 resolve(nil);
                 return;
         }
