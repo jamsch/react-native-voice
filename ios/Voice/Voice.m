@@ -169,10 +169,9 @@ static AVAudioFrameCount const bufferSize = 1024;
             [self stop];
             return;
         }
-        
+
         if (error) {
-            NSString *errorMessage = [NSString stringWithFormat:@"%@", [error localizedDescription]];
-            [self sendResult:@{@"code": @"recognition_fail", @"message": errorMessage} :nil :nil :nil];
+            [self sendResult:@{@"code": @"recognition_fail", @"message": [error localizedDescription]} :nil :nil :nil];
             [self stop];
             return;
         }
