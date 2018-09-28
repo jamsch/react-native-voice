@@ -90,15 +90,15 @@ static AVAudioFrameCount const bufferSize = 1024;
     if (!self.audioSession) {
         self.audioSession = [AVAudioSession sharedInstance];
     }
-
+    
     // Set audio session to inactive and notify other sessions
     // [self.audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error: nil];
     NSString* audioCategory = [self.audioSession category];
-
+    
     if (!self.priorAudioCategory) {
         self.priorAudioCategory = audioCategory;
     }
-
+    
     // Category hasn't changed -- do nothing
     if ([self.priorAudioCategory isEqualToString:audioCategory]) return;
     // Reset back to the previous category
@@ -117,11 +117,11 @@ static AVAudioFrameCount const bufferSize = 1024;
     [self reset];
     
     self.sessionId = [[NSUUID UUID] UUIDString];
-
+    
     if (!localeStr) {
         localeStr = @"en-US";
     }
-
+    
     NSLocale* locale = [NSLocale localeWithLocaleIdentifier:localeStr];
     
     self.speechRecognizer = [[SFSpeechRecognizer alloc] initWithLocale:locale];
@@ -134,27 +134,30 @@ static AVAudioFrameCount const bufferSize = 1024;
     }
     
     self.audioEngine = [[AVAudioEngine alloc] init];
-    
-    AVAudioInputNode* inputNode = self.audioEngine.inputNode;
-    if (inputNode == nil) {
-        [self sendResult:@{@"code": @"input"} :nil :nil :nil];
-        [self stop];
-        return;
-    }
 }
 
 - (void) startRecognizing {
     self.recognitionRequest = [[SFSpeechAudioBufferRecognitionRequest alloc] init];
-
+    
     if (!self.recognitionRequest) {
         [self sendResult:@{@"code": @"recognition_init"} :nil :nil :nil];
         [self stop];
         return;
     }
+    
+    AVAudioInputNode* inputNode = self.audioEngine.inputNode;
 
+    if (!inputNode) {
+        [self sendResult:@{@"code": @"input"} :nil :nil :nil];
+        [self stop];
+        return;
+    }
+    
+    AVAudioFormat* recordingFormat = [inputNode outputFormatForBus:bus];
+    
     // Configure request so that results are returned before audio recording is finished
     self.recognitionRequest.shouldReportPartialResults = YES;
-
+    
     [self sendEventWithName:@"onSpeechStart" body:nil];
     
     // A recognition task represents a speech recognition session.
@@ -166,14 +169,14 @@ static AVAudioFrameCount const bufferSize = 1024;
             [self stop];
             return;
         }
-
+        
         if (error) {
-            NSString *errorMessage = [NSString stringWithFormat:@"%ld/%@", error.code, [error localizedDescription]];
+            NSString *errorMessage = [NSString stringWithFormat:@"%@", [error localizedDescription]];
             [self sendResult:@{@"code": @"recognition_fail", @"message": errorMessage} :nil :nil :nil];
             [self stop];
             return;
         }
-     
+        
         BOOL isFinal = result.isFinal;
         
         if (result) {
@@ -182,7 +185,7 @@ static AVAudioFrameCount const bufferSize = 1024;
                 [transcriptionDics addObject:transcription.formattedString];
             }
             
-            [self sendResult :nil :result.bestTranscription.formattedString :transcriptionDics :[NSNumber numberWithBool:isFinal]];                
+            [self sendResult :nil :result.bestTranscription.formattedString :transcriptionDics :[NSNumber numberWithBool:isFinal]];
         }
         
         // Finish speech recognition
@@ -191,9 +194,6 @@ static AVAudioFrameCount const bufferSize = 1024;
         }
     }];
     
-    AVAudioMixerNode *mixer = [[AVAudioMixerNode alloc] init];
-    AVAudioFormat* recordingFormat = [mixer outputFormatForBus:bus];
-
     if (self.recordingEnabled) {
         NSURL *fileURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:@"output.wav"];
         // Re-allocate output file
@@ -206,31 +206,29 @@ static AVAudioFrameCount const bufferSize = 1024;
         }
     }
     
-    [self.audioEngine attachNode:mixer];
-
     // Start recording buffer
     @try {
         // User opted for storing recording buffer to file
         if (self.recordingEnabled && self.outputFile) {
-            [mixer installTapOnBus: bufferSize:bufferSize format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
+            [inputNode installTapOnBus: bufferSize:bufferSize format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
                 @try {
                     if (self.outputFile) {
                         [self.outputFile writeFromBuffer:buffer error:nil];
-                    }                   
+                    }
                     if (self.recognitionRequest) {
                         [self.recognitionRequest appendAudioPCMBuffer:buffer];
                     }
                 } @catch (NSException *exception) {
                     NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
                 } @finally {}
-            }
+            }];
         } else {
             // Default: just append buffer to recognition request
-            [mixer installTapOnBus:bus bufferSize:bufferSize format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
+            [inputNode installTapOnBus:bus bufferSize:bufferSize format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
                 // Todo: write recording buffer to file (if user opts in)
                 if (self.recognitionRequest) {
                     [self.recognitionRequest appendAudioPCMBuffer:buffer];
-                }           
+                }
             }];
         }
     } @catch (NSException *exception) {
@@ -240,7 +238,6 @@ static AVAudioFrameCount const bufferSize = 1024;
         return;
     } @finally {}
     
-    [self.audioEngine connect:inputNode to:mixer format:recordingFormat];
     [self.audioEngine prepare];
     NSError* audioSessionError = nil;
     [self.audioEngine startAndReturnError:&audioSessionError];
@@ -268,7 +265,7 @@ static AVAudioFrameCount const bufferSize = 1024;
     if (error) {
         [self sendEventWithName:@"onSpeechError" body:error];
     }
-
+    
     if (bestTranscription) {
         if ([isFinal boolValue]) {
             [self sendEventWithName:@"onSpeechResults" body:@{@"value":@[bestTranscription]} ];
@@ -289,12 +286,12 @@ static AVAudioFrameCount const bufferSize = 1024;
     if (self.isTearingDown || !self.sessionId) {
         return;
     }
-
+    
     self.isTearingDown = YES;
-
+    
     // Set back audio session category
     [self resetAudioSession];
-
+    
     if (self.recognitionTask) {
         [self.recognitionTask cancel];
     }
@@ -305,7 +302,7 @@ static AVAudioFrameCount const bufferSize = 1024;
             [self.audioEngine.inputNode removeTapOnBus:bus];
         }
         
-        // Stop audio engine and dereference it for re-allocation
+        // Stop audio engine
         if (self.audioEngine.isRunning) {
             [self.audioEngine stop];
         }
@@ -313,7 +310,7 @@ static AVAudioFrameCount const bufferSize = 1024;
     
     self.sessionId = nil;
     self.isTearingDown = NO;
-
+    
     // Emit onSpeechEnd event
     [self sendEventWithName:@"onSpeechEnd" body:nil];
 }
@@ -323,13 +320,13 @@ static AVAudioFrameCount const bufferSize = 1024;
         [self.recognitionTask cancel];
         self.recognitionTask = nil;
     }
-
+    
     self.recognitionRequest = nil;
     
     if (self.audioEngine != nil) {
         self.audioEngine = nil;
     }
-
+    
     if (self.speechRecognizer != nil) {
         [self.speechRecognizer setDelegate:nil];
     }
@@ -386,8 +383,8 @@ RCT_EXPORT_METHOD(isReady:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRe
 RCT_EXPORT_METHOD(prepare:(NSString*)localeStr
                   options:(NSDictionary *)options
                   resolver:(RCTPromiseResolveBlock)resolve
-                  rejecter:(RCTPromiseRejectBlock)reject)) {
-     if (self.sessionId != nil) {
+                  rejecter:(RCTPromiseRejectBlock)reject) {
+    if (self.sessionId != nil) {
         reject(@"recognizer_busy", @"Speech recognition already started!", nil);
         return;
     }
@@ -396,7 +393,7 @@ RCT_EXPORT_METHOD(prepare:(NSString*)localeStr
         reject(@"not_ready", @"Speech recognition is not ready", nil);
         return;
     };
-
+    
     // Configure speech recognition options
     @try {
         if ([options objectForKey:@"recordingEnabled"]) {
@@ -422,7 +419,7 @@ RCT_EXPORT_METHOD(start:(NSString*)localeStr
         reject(@"not_ready", @"Speech recognition is not ready", nil);
         return;
     };
-
+    
     [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
         switch (status) {
             case SFSpeechRecognizerAuthorizationStatusNotDetermined:
@@ -461,11 +458,6 @@ RCT_EXPORT_METHOD(setCategory:(NSString *)categoryName
     } else if ([categoryName isEqual: @"PlayAndRecord"]) {
         category = AVAudioSessionCategoryPlayAndRecord;
     }
-#if TARGET_OS_IOS
-    else if ([categoryName isEqual: @"AudioProcessing"]) {
-        category = AVAudioSessionCategoryAudioProcessing;
-    }
-#endif
     else if ([categoryName isEqual: @"MultiRoute"]) {
         category = AVAudioSessionCategoryMultiRoute;
     }
