@@ -209,7 +209,7 @@ static AVAudioFrameCount const bufferSize = 1024;
     @try {
         // User opted for storing recording buffer to file
         if (self.recordingEnabled && self.outputFile) {
-            [inputNode installTapOnBus: bufferSize:bufferSize format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
+            [inputNode installTapOnBus:bus bufferSize:bufferSize format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
                 @try {
                     if (self.outputFile) {
                         [self.outputFile writeFromBuffer:buffer error:nil];
