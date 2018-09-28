@@ -409,12 +409,7 @@ RCT_EXPORT_METHOD(prepare:(NSString*)localeStr
 
 RCT_EXPORT_METHOD(startSpeech:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
-{
-    if (self.sessionId != nil) {
-        reject(@"recognizer_busy", @"Speech recognition already started!", nil);
-        return;
-    }
-    
+{    
     if (self.isTearingDown) {
         reject(@"not_ready", @"Speech recognition is not ready", nil);
         return;
