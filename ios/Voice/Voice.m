@@ -402,6 +402,7 @@ RCT_EXPORT_METHOD(prepare:(NSString*)localeStr
         NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
         self.recordingEnabled = false;
     } @finally {
+        [self prepare:localeStr];
         resolve(nil);
     }
 }
@@ -431,7 +432,7 @@ RCT_EXPORT_METHOD(startSpeech:(RCTPromiseResolveBlock)resolve
                 reject(@"restricted", @"Speech recognition restricted on this device", nil);
                 return;
             case SFSpeechRecognizerAuthorizationStatusAuthorized:
-                [self prepare:localeStr];
+                [self startRecognizing:localeStr];
                 resolve(nil);
                 return;
         }
