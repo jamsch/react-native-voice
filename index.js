@@ -73,17 +73,19 @@ class RCTVoice {
   /**
    * Destroys the speech recognizer instance & removes all listeners
    */
-  async destroy() {
+  async stop() {
     if (!this._loaded && !this._listeners) {
       return;
     }
-    try {
+
+    if (Platform.OS === 'ios') {
+      await Voice.stop();
+    } else {
       await Voice.destroySpeech();
-      if (this._listeners) {
-        this.removeAllListeners();
-      }
-    } catch (error) {
-      throw error;
+    }
+
+    if (this._listeners) {
+      this.removeAllListeners();
     }
   }
 
@@ -144,25 +146,6 @@ class RCTVoice {
         // Non-android & iOS devices are not supported
         throw { code: 'not_available' };
     }
-  }
-
-  async stop() {
-    if (!this._loaded && !this._listeners) {
-      return;
-    }
-    // on Android this may throw an error
-    await Voice.stopSpeech();
-  }
-
-  /**
-   * Cancels speech recognition
-   */
-  async cancel() {
-    if (!this._loaded && !this._listeners) {
-      return;
-    }
-    // on Android this may throw an error
-    await Voice.cancelSpeech();
   }
 
   /**
