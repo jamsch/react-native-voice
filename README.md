@@ -163,8 +163,6 @@ Static access to the Voice API.
 | Voice.isReady()                                                     | Checks whether speech recognition is ready to be used.                                                | iOS          |
 | Voice.start(locale: string, options: {})                            | Starts speech recognition. See [Speech recognition options](#speech-recognition-options) for options. | Android, iOS |
 | Voice.stop()                                                        | Stops listening for speech. Returns null if no error occurs.                                          | Android, iOS |
-| Voice.cancel()                                                      | Cancels the speech recognition. Returns null if no error occurs.                                      | Android, iOS |
-| Voice.destroy()                                                     | Destroys the current SpeechRecognizer instance. Returns null if no error occurs.                      | Android, iOS |
 | Voice.removeAllListeners()                                          | Cleans/nullifies overridden `Voice` static methods.                                                   | Android, iOS |
 | Voice.isRecognizing()                                               | Return if the SpeechRecognizer is recognizing.                                                        | Android, iOS |
 | Voice.setCategory(category: string)                                 | Sets the iOS audio category.                                                                          | iOS          |
@@ -181,8 +179,8 @@ Usage: `Voice.start(locale: string, options: {})`
 | `EXTRA_MAX_RESULTS`: number                                       | Optional limit on the maximum number of results to return. If omitted the recognizer will choose how many results to return                                                                               | `5`                          | Android  |
 | `EXTRA_PARTIAL_RESULTS`: boolean                                  | Optional boolean to indicate whether partial results should be returned by the recognizer as the user speaks                                                                                              | `true`                       | Android  |
 | `EXTRA_SPEECH_INPUT_COMPLETE_`<br>`SILENCE_LENGTH_MILLIS`: number | The amount of time that it should take after we stop hearing speech to consider the input complete.                                                                                                       | not set                      | Android  |
-| `EXTRA_SPEECH_INPUT_MINIMUM_`<br>`LENGTH_MILLIS`: number | The minimum length of an utterance                                                           | not set                      | Android  |
-| `continous`: boolean                                              | Enables continuous speech recognition                                                                                                                                                                     | `false`                      | iOS      |
+| `EXTRA_SPEECH_INPUT_MINIMUM_`<br>`LENGTH_MILLIS`: number          | The minimum length of an utterance                                                                                                                                                                        | not set                      | Android  |
+| `recordingEnabled`: boolean                                       | Records audio buffer to a file (WIP, accessible by `file://${RNFS.DocumentDirectoryPath}/output.wav`)                                                                                                     | `false`                      | iOS      |
 
 ## Events
 
