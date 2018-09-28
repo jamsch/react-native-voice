@@ -1,10 +1,16 @@
 import React from 'react';
-import { NativeModules, NativeEventEmitter, Platform, PermissionsAndroid } from 'react-native';
+import {
+  NativeModules,
+  NativeEventEmitter,
+  Platform,
+  PermissionsAndroid
+} from 'react-native';
 
 const { Voice } = NativeModules;
 
 // NativeEventEmitter is only availabe on React Native platforms, so this conditional is used to avoid import conflicts in the browser/server
-const voiceEmitter = Platform.OS !== 'web' ? new NativeEventEmitter(Voice) : null;
+const voiceEmitter =
+  Platform.OS !== 'web' ? new NativeEventEmitter(Voice) : null;
 
 class RCTVoice {
   constructor() {
@@ -90,7 +96,10 @@ class RCTVoice {
       return true;
     }
 
-    const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO, this.rationale);
+    const result = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+      this.rationale
+    );
     return result === true || result === PermissionsAndroid.RESULTS.GRANTED;
   }
 
@@ -101,12 +110,17 @@ class RCTVoice {
    */
   async start(locale, options = {}) {
     if (!this._loaded && !this._listeners && voiceEmitter !== null) {
-      this._listeners = Object.keys(this._events).map((key, index) => voiceEmitter.addListener(key, this._events[key]));
+      this._listeners = Object.keys(this._events).map((key, index) =>
+        voiceEmitter.addListener(key, this._events[key])
+      );
     }
 
     switch (Platform.OS) {
       case 'ios':
-        return await Voice.startSpeech(locale, { continuous: Boolean(options.continuous) });
+        await Voice.prepare(locale, {
+          continuous: Boolean(options.continuous)
+        });
+        return await Voice.startSpeech();
       case 'android':
         // Returns "true" if the user already has permissions
         const hasPermissions = await this.requestPermissionsAndroid();
