@@ -225,7 +225,6 @@ static AVAudioFrameCount const bufferSize = 1024;
         } else {
             // Default: just append buffer to recognition request
             [inputNode installTapOnBus:bus bufferSize:bufferSize format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
-                // Todo: write recording buffer to file (if user opts in)
                 if (self.recognitionRequest) {
                     [self.recognitionRequest appendAudioPCMBuffer:buffer];
                 }
@@ -291,6 +290,10 @@ static AVAudioFrameCount const bufferSize = 1024;
     
     // Set back audio session category
     [self resetAudioSession];
+    
+    if (self.recognitionRequest) {
+        [self.recognitionRequest endAudio];
+    }
     
     if (self.recognitionTask) {
         [self.recognitionTask cancel];
