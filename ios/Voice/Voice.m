@@ -10,11 +10,11 @@
 /** Whether speech recognition is finishing.. */
 @property (nonatomic) BOOL isTearingDown;
 @property (nonatomic) BOOL continuous;
-@property (nonatomic) SFSpeechRecognizer* speechRecognizer;
-@property (nonatomic) SFSpeechAudioBufferRecognitionRequest* recognitionRequest;
-@property (nonatomic) AVAudioEngine* audioEngine;
-@property (nonatomic) SFSpeechRecognitionTask* recognitionTask;
-@property (nonatomic) AVAudioSession* audioSession;
+@property (strong, nonatomic) SFSpeechRecognizer* speechRecognizer;
+@property (strong, nonatomic) SFSpeechAudioBufferRecognitionRequest* recognitionRequest;
+@property (strong, nonatomic) AVAudioEngine* audioEngine;
+@property (strong, nonatomic) SFSpeechRecognitionTask* recognitionTask;
+@property (strong, nonatomic) AVAudioSession* audioSession;
 @property (nonatomic) NSString *sessionId;
 // Recording options
 @property (nonatomic) AVAudioFile *outputFile;
@@ -222,7 +222,7 @@
                 } @catch (NSException *exception) {
                     NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
                 } @finally {}
-            }
+            }];
         }
 
         // Default: just append buffer to recognition request
@@ -450,13 +450,7 @@ RCT_EXPORT_METHOD(setCategory:(NSString *)categoryName
         category = AVAudioSessionCategoryRecord;
     } else if ([categoryName isEqual: @"PlayAndRecord"]) {
         category = AVAudioSessionCategoryPlayAndRecord;
-    }
-#if TARGET_OS_IOS
-    else if ([categoryName isEqual: @"AudioProcessing"]) {
-        category = AVAudioSessionCategoryAudioProcessing;
-    }
-#endif
-    else if ([categoryName isEqual: @"MultiRoute"]) {
+    } else if ([categoryName isEqual: @"MultiRoute"]) {
         category = AVAudioSessionCategoryMultiRoute;
     }
     
