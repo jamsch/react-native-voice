@@ -8,20 +8,20 @@
 
 @interface Voice () <SFSpeechRecognizerDelegate>
 /** Whether speech recognition is finishing.. */
-@property (nonatomic) BOOL isTearingDown;
-@property (nonatomic) BOOL continuous;
-@property (strong, nonatomic) SFSpeechRecognizer* speechRecognizer;
-@property (strong, nonatomic) SFSpeechAudioBufferRecognitionRequest* recognitionRequest;
-@property (strong, nonatomic) AVAudioEngine* audioEngine;
-@property (strong, nonatomic) SFSpeechRecognitionTask* recognitionTask;
-@property (strong, nonatomic) AVAudioSession* audioSession;
-@property (nonatomic) NSString *sessionId;
+@property BOOL isTearingDown;
+@property BOOL continuous;
+@property SFSpeechRecognizer* speechRecognizer;
+@property SFSpeechAudioBufferRecognitionRequest* recognitionRequest;
+@property AVAudioEngine* audioEngine;
+@property SFSpeechRecognitionTask* recognitionTask;
+@property AVAudioSession* audioSession;
+@property NSString *sessionId;
 // Recording options
-@property (nonatomic) AVAudioFile *outputFile;
-@property (nonatomic) BOOL recordingEnabled;
-@property (nonatomic) NSString *recordingFileName;
+@property AVAudioFile *outputFile;
+@property BOOL recordingEnabled;
+@property NSString *recordingFileName;
 /** Previous category the user was on prior to starting speech recognition */
-@property (nonatomic) NSString *priorAudioCategory;
+@property NSString *priorAudioCategory;
 
 
 @end
