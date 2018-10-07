@@ -151,6 +151,7 @@
     }
     
     AVAudioInputNode* inputNode = self.audioEngine.inputNode;
+    
     if (inputNode == nil) {
         [self sendResult:@{@"code": @"input"} :nil :nil :nil];
         [self teardown];
@@ -207,14 +208,12 @@
             return;
         }
     }
-    
-    [self.audioEngine attachNode:mixer];
 
     // Start recording buffer
     @try {
         // User opted for storing recording buffer to file
         if (self.recordingEnabled && self.outputFile) {
-            [mixer installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
+            [inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
                 @try {
                     if (self.recordingEnabled && self.outputFile) {
                         [self.outputFile writeFromBuffer:buffer error:nil];
@@ -226,11 +225,15 @@
         }
 
         // Default: just append buffer to recognition request
-        [mixer installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
+        [inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
             // Todo: write recording buffer to file (if user opts in)
-            if (self.recognitionRequest) {
-                [self.recognitionRequest appendAudioPCMBuffer:buffer];
-            }           
+            @try {
+                if (self.recognitionRequest) {
+                    [self.recognitionRequest appendAudioPCMBuffer:buffer];
+                }
+            } @catch (NSException *exception) {
+                NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
+            }
         }];
     } @catch (NSException *exception) {
         NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
@@ -239,7 +242,6 @@
         return;
     } @finally {}
     
-    [self.audioEngine connect:inputNode to:mixer format:recordingFormat];
     [self.audioEngine prepare];
     NSError* audioSessionError = nil;
     [self.audioEngine startAndReturnError:&audioSessionError];
