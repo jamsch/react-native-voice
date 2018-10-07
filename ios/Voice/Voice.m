@@ -18,8 +18,8 @@
 @property NSString *sessionId;
 // Recording options
 @property AVAudioFile *outputFile;
-@property BOOL recordingEnabled;
-@property NSString *recordingFileName;
+// @property BOOL recordingEnabled;
+// @property NSString *recordingFileName;
 /** Previous category the user was on prior to starting speech recognition */
 @property NSString *priorAudioCategory;
 
@@ -196,6 +196,7 @@
     
     AVAudioFormat* recordingFormat = [inputNode outputFormatForBus:0];
 
+    /*
     if (self.recordingEnabled) {
         NSURL *fileURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:@"output.wav"];
         // Re-allocate output file
@@ -207,9 +208,11 @@
             return;
         }
     }
+     */
 
     // Start recording buffer
     @try {
+        /*
         // User opted for storing recording buffer to file
         if (self.recordingEnabled && self.outputFile) {
             [inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
@@ -223,6 +226,8 @@
             }];
         }
 
+         */
+        
         // Default: just append buffer to recognition request
         [inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
             // Todo: write recording buffer to file (if user opts in)
@@ -405,13 +410,15 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
         if ([options objectForKey:@"continuous"]) {
             self.continuous = [RCTConvert BOOL:options[@"continuous"]];
         }
+        /*
         if ([options objectForKey:@"recordingEnabled"]) {
             self.recordingEnabled = [RCTConvert BOOL:options[@"recordingEnabled"]];
         }
+         */
     } @catch (NSException *exception) {
         NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
         self.continuous = false;
-        self.recordingEnabled = false;
+        // self.recordingEnabled = false;
     } @finally {}
     
     [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
