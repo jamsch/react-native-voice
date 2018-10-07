@@ -194,8 +194,7 @@
         }
     }];
     
-    AVAudioMixerNode *mixer = [[AVAudioMixerNode alloc] init];
-    AVAudioFormat* recordingFormat = [mixer outputFormatForBus:0];
+    AVAudioFormat* recordingFormat = [inputNode outputFormatForBus:0];
 
     if (self.recordingEnabled) {
         NSURL *fileURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:@"output.wav"];
