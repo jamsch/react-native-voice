@@ -8,18 +8,18 @@
 
 @interface Voice () <SFSpeechRecognizerDelegate>
 /** Whether speech recognition is finishing.. */
-@property (nonatomic) BOOL isTearingDown;
-@property (nonatomic) BOOL continuous;
-@property (nonatomic) SFSpeechRecognizer* speechRecognizer;
-@property (nonatomic) SFSpeechAudioBufferRecognitionRequest* recognitionRequest;
-@property (nonatomic) AVAudioEngine* audioEngine;
-@property (nonatomic) SFSpeechRecognitionTask* recognitionTask;
-@property (nonatomic) AVAudioSession* audioSession;
-@property (nonatomic) NSString *sessionId;
+@property BOOL isTearingDown;
+@property BOOL continuous;
+@property SFSpeechRecognizer* speechRecognizer;
+@property SFSpeechAudioBufferRecognitionRequest* recognitionRequest;
+@property AVAudioEngine* audioEngine;
+@property SFSpeechRecognitionTask* recognitionTask;
+@property AVAudioSession* audioSession;
+@property NSString *sessionId;
 // Recording options
-@property (nonatomic) AVAudioFile *outputFile;
-@property (nonatomic) BOOL recordingEnabled;
-@property (nonatomic) NSString *recordingFileName;
+@property AVAudioFile *outputFile;
+@property BOOL recordingEnabled;
+@property NSString *recordingFileName;
 
 @end
 
@@ -161,13 +161,13 @@
         }
         
         // Finish speech recognition
-        if ((isFinal && !self.continuous) || self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
+        if ((isFinal && !self.continuous) || !self.recognitionTask || self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
             [self teardown];
         }        
     }];
     
     AVAudioFormat *recordingFormat = [inputNode outputFormatForBus:0];
-    
+    /*
     if (self.recordingEnabled) {
         NSURL *fileURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:@"output.wav"];
         // Re-allocate output file
@@ -179,6 +179,7 @@
             return;
         }
     }
+    */
     
     // Start recording and append recording buffer to speech recognizer
     @try {
@@ -187,13 +188,6 @@
             if (self.recognitionRequest) {
                 [self.recognitionRequest appendAudioPCMBuffer:buffer];
             }
-            @try {
-                if (self.recordingEnabled && self.outputFile) {
-                    [self.outputFile writeFromBuffer:buffer error:nil];
-                }
-            } @catch (NSException *exception) {
-                NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
-            } @finally {}
         }];
     } @catch (NSException *exception) {
         NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
@@ -228,25 +222,29 @@
 }
 
 - (void) sendResult:(NSDictionary*)error :(NSString*)bestTranscription :(NSArray*)transcriptions :(NSNumber*)isFinal {
-    if (error != nil) {
+    if (errorc) {
         [self sendEventWithName:@"onSpeechError" body:error];
     }
-    if (bestTranscription != nil) {
-        if ([isFinal boolValue] == YES) {
+    if (bestTranscription) {
+        if ([isFinal boolValue]) {
             [self sendEventWithName:@"onSpeechResults" body:@{@"value":@[bestTranscription]} ];
         } else {
             [self sendEventWithName:@"onSpeechPartialResults" body:@{@"value":transcriptions} ];
         }
-    } else if (transcriptions != nil) {
+    } else if (transcriptions) {
         [self sendEventWithName:@"onSpeechPartialResults" body:@{@"value":transcriptions} ];
     }
     
-    if ([isFinal boolValue] == YES) {
+    if ([isFinal boolValue]) {
         [self sendEventWithName:@"onSpeechRecognized" body: @{@"isFinal": isFinal}];
     }
 }
 
 - (void) teardown {
+    // Prevent additional tear-down calls
+    if (self.isTearingDown || !self.sessionId) {
+        return;
+    }
     self.isTearingDown = YES;
     if (self.recognitionTask) {
         [self.recognitionTask cancel];
@@ -256,6 +254,7 @@
     // End recognition request
     if (self.recognitionRequest) {
         [self.recognitionRequest endAudio];
+        self.recognitionRequest = nil;
     }
     
     // Remove tap on bus
@@ -268,12 +267,10 @@
         // Stop audio engine and dereference it for re-allocation
         if (self.audioEngine.isRunning) {
             [self.audioEngine stop];
-            [self.audioEngine reset];
             self.audioEngine = nil;
         }
     }
     
-    self.recognitionRequest = nil;
     self.sessionId = nil;
     self.isTearingDown = NO;
 
@@ -301,9 +298,7 @@ RCT_EXPORT_METHOD(cancelSpeech:(RCTPromiseResolveBlock)resolve rejecter:(RCTProm
 }
 
 RCT_EXPORT_METHOD(destroySpeech:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
-    if (!self.isTearingDown && self.sessionId != nil) {
-        [self teardown];
-    }
+    [self teardown];
     resolve(nil);
 }
 
@@ -361,9 +356,11 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
         if ([options objectForKey:@"continuous"]) {
             self.continuous = [RCTConvert BOOL:options[@"continuous"]];
         }
+        /*
         if ([options objectForKey:@"recordingEnabled"]) {
             self.recordingEnabled = [RCTConvert BOOL:options[@"recordingEnabled"]];
         }
+         */
     } @catch (NSException *exception) {
         NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
         self.continuous = false;
@@ -407,13 +404,7 @@ RCT_EXPORT_METHOD(setCategory:(NSString *)categoryName
         category = AVAudioSessionCategoryRecord;
     } else if ([categoryName isEqual: @"PlayAndRecord"]) {
         category = AVAudioSessionCategoryPlayAndRecord;
-    }
-#if TARGET_OS_IOS
-    else if ([categoryName isEqual: @"AudioProcessing"]) {
-        category = AVAudioSessionCategoryAudioProcessing;
-    }
-#endif
-    else if ([categoryName isEqual: @"MultiRoute"]) {
+    } else if ([categoryName isEqual: @"MultiRoute"]) {
         category = AVAudioSessionCategoryMultiRoute;
     }
     
