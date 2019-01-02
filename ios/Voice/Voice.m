@@ -52,14 +52,14 @@
 -(BOOL) setupAudioSession {
     NSError* setCategoryError = nil;
     
-    [self.audioSession setCategory:AVAudioSessionCategoryRecord error:&setCategoryError];
-    
-    [self.audioSession setMode:AVAudioSessionModeMeasurement error:nil];
+    [self.audioSession setCategory:AVAudioSessionCategoryPlayAndRecord error:&setCategoryError];
     
     if (setCategoryError != nil) {
         [self sendResult:@{@"code": @"audio", @"message": [setCategoryError localizedDescription]} :nil :nil :nil];
         return NO;
     }
+    
+    [self.audioSession setMode:AVAudioSessionModeMeasurement error:nil];
     
     NSError* audioSessionError = nil;
     
@@ -222,7 +222,7 @@
 }
 
 - (void) sendResult:(NSDictionary*)error :(NSString*)bestTranscription :(NSArray*)transcriptions :(NSNumber*)isFinal {
-    if (errorc) {
+    if (error) {
         [self sendEventWithName:@"onSpeechError" body:error];
     }
     if (bestTranscription) {
