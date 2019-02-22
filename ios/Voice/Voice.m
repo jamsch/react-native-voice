@@ -8,20 +8,16 @@
 
 @interface Voice () <SFSpeechRecognizerDelegate>
 /** Whether speech recognition is finishing.. */
-@property (nonatomic) BOOL isTearingDown;
-@property (nonatomic) BOOL continuous;
-@property (nonatomic) SFSpeechRecognizer* speechRecognizer;
-@property (nonatomic) SFSpeechAudioBufferRecognitionRequest* recognitionRequest;
-@property (nonatomic) AVAudioEngine* audioEngine;
-@property (nonatomic) SFSpeechRecognitionTask* recognitionTask;
-@property (nonatomic) AVAudioSession* audioSession;
-@property (nonatomic) NSString *sessionId;
-// Recording options
-@property (nonatomic) AVAudioFile *outputFile;
-@property (nonatomic) BOOL recordingEnabled;
-@property (nonatomic) NSString *recordingFileName;
+@property BOOL isTearingDown;
+@property BOOL continuous;
+@property SFSpeechRecognizer* speechRecognizer;
+@property SFSpeechAudioBufferRecognitionRequest* recognitionRequest;
+@property AVAudioEngine* audioEngine;
+@property SFSpeechRecognitionTask* recognitionTask;
+@property AVAudioSession* audioSession;
+@property NSString *sessionId;
 /** Previous category the user was on prior to starting speech recognition */
-@property (nonatomic) NSString *priorAudioCategory;
+@property NSString *priorAudioCategory;
 
 
 @end
@@ -155,19 +151,6 @@
     AVAudioMixerNode *mixer = [[AVAudioMixerNode alloc] init];
     AVAudioFormat* recordingFormat = [mixer outputFormatForBus:0];
     
-    if (self.recordingEnabled) {
-        NSURL *fileURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:@"output.wav"];
-        // Re-allocate output file
-        NSError* recordError = nil;
-        self.outputFile = [[AVAudioFile alloc] initForWriting:fileURL settings:recordingFormat.settings error:&recordError];
-        if (recordError != nil) {
-            [self sendResult:@{@"code": @"record_error", @"message": [recordError localizedDescription], @"domain": [recordError domain]} :nil :nil :nil];
-            [self teardown];
-            return;
-        }
-    }
-    
-    
     [self.audioEngine attachNode:mixer];
     
     // Start recording and append recording buffer to speech recognizer
@@ -177,14 +160,6 @@
             if (self.recognitionRequest) {
                 [self.recognitionRequest appendAudioPCMBuffer:buffer];
             }
-            
-            @try {
-                if (self.recordingEnabled && self.outputFile) {
-                    [self.outputFile writeFromBuffer:buffer error:nil];
-                }
-            } @catch (NSException *exception) {
-                NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
-            } @finally {}
         }];
     } @catch (NSException *exception) {
         NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
@@ -354,13 +329,9 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
         if ([options objectForKey:@"continuous"]) {
             self.continuous = [RCTConvert BOOL:options[@"continuous"]];
         }
-        if ([options objectForKey:@"recordingEnabled"]) {
-            self.recordingEnabled = [RCTConvert BOOL:options[@"recordingEnabled"]];
-        }
     } @catch (NSException *exception) {
         NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
         self.continuous = false;
-        self.recordingEnabled = false;
     } @finally {}
     
     [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
