@@ -53,27 +53,33 @@
 
 /** Returns "YES" if no errors had occurred */
 -(BOOL) setupAudioSession {
-    if (!self.audioSession) {
-        self.audioSession = [AVAudioSession sharedInstance];
-    }
-    if ([self isHeadsetPluggedIn] || [self isHeadSetBluetooth]){
-        [self.audioSession setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionAllowBluetooth error: nil];
-    }
-    else {
-        [self.audioSession setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker error: nil];
-    }
-    
-    NSError* audioSessionError = nil;
-    
-    // Activate the audio session
-    [self.audioSession setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&audioSessionError];
-    
-    if (audioSessionError != nil) {
-        [self sendResult:@{@"code": @"audio", @"message": [audioSessionError localizedDescription]} :nil :nil :nil];
+    @try {
+        if (!self.audioSession) {
+            self.audioSession = [AVAudioSession sharedInstance];
+        }
+        
+        NSError* audioSessionError = nil;
+        [self.audioSession setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionMixWithOthers error:&audioSessionError];
+        
+        if (audioSessionError != nil) {
+            [self sendResult:@{@"code": @"audio", @"message": [audioSessionError localizedDescription]} :nil :nil :nil];
+            return NO;
+        }
+        
+        // Activate the audio session
+        [self.audioSession setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&audioSessionError];
+        
+        if (audioSessionError != nil) {
+            [self sendResult:@{@"code": @"audio", @"message": [audioSessionError localizedDescription]} :nil :nil :nil];
+            return NO;
+        }
+        return YES;
+    } @catch (NSException *exception) {
+        NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
+        [self sendResult:@{@"code": @"audio", @"message": [exception reason]} :nil :nil :nil];
         return NO;
-    }
+    } @finally {}
     
-    return YES;
 }
 
 -(NSURL *)applicationDocumentsDirectory {
@@ -194,40 +200,11 @@
         }
     }];
     
-    AVAudioFormat* recordingFormat = [inputNode outputFormatForBus:0];
+    AVAudioFormat* recordingFormat = [inputNode inputFormatForBus:0];
     
-    /*
-     if (self.recordingEnabled) {
-     NSURL *fileURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:@"output.wav"];
-     // Re-allocate output file
-     NSError* recordError = nil;
-     self.outputFile = [[AVAudioFile alloc] initForWriting:fileURL settings:recordingFormat.settings error:&recordError];
-     if (recordError) {
-     [self sendResult:@{@"code": @"record_error", @"message": [recordError localizedDescription], @"domain": [recordError domain]} :nil :nil :nil];
-     [self teardown];
-     return;
-     }
-     }
-     */
     
     // Start recording buffer
     @try {
-        /*
-         // User opted for storing recording buffer to file
-         if (self.recordingEnabled && self.outputFile) {
-         [inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
-         @try {
-         if (self.recordingEnabled && self.outputFile) {
-         [self.outputFile writeFromBuffer:buffer error:nil];
-         }
-         } @catch (NSException *exception) {
-         NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
-         } @finally {}
-         }];
-         }
-         
-         */
-        
         // Default: just append buffer to recognition request
         [inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
             // Todo: write recording buffer to file (if user opts in)
