@@ -12,6 +12,7 @@ repositories {
         // For developing the example app.
         url "$projectDir/../../react-native/android"
     }
+    google()
 }
 
 def DEFAULT_COMPILE_SDK_VERSION = 23
