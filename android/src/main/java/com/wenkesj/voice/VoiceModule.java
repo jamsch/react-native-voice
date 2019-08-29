@@ -1,6 +1,7 @@
 package com.wenkesj.voice;
 
 import android.Manifest;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -54,7 +55,7 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
       speech.destroy();
       speech = null;
     }
-    speech = SpeechRecognizer.createSpeechRecognizer(this.reactContext);
+    speech = SpeechRecognizer.createSpeechRecognizer(this.reactContext, ComponentName.unflattenFromString("com.google.android.googlequicksearchbox/com.google.android.voicesearch.serviceapi.GoogleRecognitionService"));
     speech.setRecognitionListener(this);
 
     final Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
