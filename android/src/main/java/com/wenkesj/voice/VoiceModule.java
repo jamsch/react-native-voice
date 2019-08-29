@@ -56,7 +56,7 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
       speech = null;
     }
 
-    String s = android.provider.Settings.Secure.getString(reactContext.getContentResolver(), "voice_recognition_service");
+    String s = android.provider.Settings.Secure.getString(this.reactContext.getContentResolver(), "voice_recognition_service");
 
     if (android.text.TextUtils.isEmpty(s)) {
       speech = SpeechRecognizer.createSpeechRecognizer(this.reactContext,ComponentName.unflattenFromString("com.google.android.googlequicksearchbox/com.google.android.voicesearch.serviceapi.GoogleRecognitionService"));
