@@ -282,15 +282,21 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
   public void onPartialResults(Bundle results) {
     WritableArray arr = Arguments.createArray();
 
-    ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-    for (String result : matches) {
-      arr.pushString(result);
-    }
+    try {
+        // On some devices, this error may pop up:
+        // Attempt to invoke virtual method 'java.util.Iterator java.util.ArrayList.iterator()' on a null object reference
+        ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+        for (String result : matches) {
+          arr.pushString(result);
+        }
 
-    WritableMap event = Arguments.createMap();
-    event.putArray("value", arr);
-    sendEvent("onSpeechPartialResults", event);
-    Log.d("ASR", "onPartialResults()");
+        WritableMap event = Arguments.createMap();
+        event.putArray("value", arr);
+        sendEvent("onSpeechPartialResults", event);
+        Log.d("ASR", "onPartialResults()");
+    } catch (Exception e) {
+        Log.d("ASR", "onPartialResults() - ERROR");
+    }
   }
 
   @Override
@@ -302,16 +308,21 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
   @Override
   public void onResults(Bundle results) {
     WritableArray arr = Arguments.createArray();
+    try {
+        // On some devices, this error may pop up:
+        // Attempt to invoke virtual method 'java.util.Iterator java.util.ArrayList.iterator()' on a null object reference
+        ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+        for (String result : matches) {
+          arr.pushString(result);
+        }
 
-    ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-    for (String result : matches) {
-      arr.pushString(result);
+        WritableMap event = Arguments.createMap();
+        event.putArray("value", arr);
+        sendEvent("onSpeechResults", event);
+        Log.d("ASR", "onResults()");
+    } catch (Exception e) {
+        Log.d("ASR", "onResults() - ERROR");
     }
-
-    WritableMap event = Arguments.createMap();
-    event.putArray("value", arr);
-    sendEvent("onSpeechResults", event);
-    Log.d("ASR", "onResults()");
   }
 
   @Override
