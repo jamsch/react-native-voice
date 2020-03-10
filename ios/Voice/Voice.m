@@ -59,7 +59,7 @@
         }
         
         NSError* audioSessionError = nil;
-        [self.audioSession setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionMixWithOthers error:&audioSessionError];
+        [self.audioSession setCategory:AVAudioSessionCategoryPlayAndRecord error:&audioSessionError];
         
         if (audioSessionError != nil) {
             [self sendResult:@{@"code": @"audio", @"message": [audioSessionError localizedDescription]} :nil :nil :nil];
