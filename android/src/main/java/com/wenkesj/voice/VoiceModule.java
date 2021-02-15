@@ -15,7 +15,6 @@ import androidx.annotation.NonNull;
 import android.util.Log;
 
 import com.facebook.react.bridge.Arguments;
-import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -126,7 +125,7 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
     speech.startListening(intent);
   }
 
-  private void startSpeechWithPermissions(final String locale, final ReadableMap opts, final Callback callback) {
+  private void startSpeechWithPermissions(final String locale, final ReadableMap opts, final Promise promise) {
     this.locale = locale;
 
     Handler mainHandler = new Handler(this.reactContext.getMainLooper());
@@ -136,9 +135,9 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
         try {
           startListening(opts);
           isRecognizing = true;
-          callback.invoke(false);
+          promise.resolve(false);
         } catch (Exception e) {
-          callback.invoke(e.getMessage());
+          promise.reject(e.getMessage());
         }
       }
     });
@@ -163,14 +162,14 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
               final boolean granted = grantResults[i] == PackageManager.PERMISSION_GRANTED;
               permissionsGranted = permissionsGranted && granted;
             }
-            startSpeechWithPermissions(locale, opts, callback);
+            startSpeechWithPermissions(locale, opts, promise);
             return permissionsGranted;
           }
         });
       }
       return;
     }
-    startSpeechWithPermissions(locale, opts, callback);
+    startSpeechWithPermissions(locale, opts, promise);
   }
 
   @ReactMethod
