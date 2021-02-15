@@ -321,7 +321,7 @@
 
 - (void) sendResult:(NSDictionary*)error :(NSString*)bestTranscription :(NSArray*)transcriptions :(NSNumber*)isFinal {
     if (error != nil) {
-        [self sendEventWithName:@"onSpeechError" body:@{@"error": error}];
+        [self sendEventWithName:@"onSpeechError" body:error];
     }
     if (bestTranscription != nil) {
         [self sendEventWithName:@"onSpeechResults" body:@{@"value":@[bestTranscription]} ];

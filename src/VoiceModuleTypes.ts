@@ -38,28 +38,26 @@ export type SpeechResultsEvent = {
 };
 
 export type SpeechErrorEvent = {
-  error?: {
-    code?:  // Android & IOS
-      | 'speech_timeout'
-      | 'permissions'
-      | 'recognizer_buzy'
-      | 'input'
-      // Android
-      | 'not_available'
-      | 'network'
-      | 'network_timeout'
-      | 'speech_input'
-      | 'audio'
-      // iOS only
-      | 'restricted'
-      | 'not_authorized'
-      | 'not_ready'
-      | 'no_match'
-      | 'recognition_init'
-      | 'recognition_fail'
-      | 'start_recording';
-    message?: string;
-  };
+  code?: // Android & IOS
+  | 'speech_timeout'
+    | 'permissions'
+    | 'recognizer_buzy'
+    | 'input'
+    // Android
+    | 'not_available'
+    | 'network'
+    | 'network_timeout'
+    | 'speech_input'
+    | 'audio'
+    // iOS only
+    | 'restricted'
+    | 'not_authorized'
+    | 'not_ready'
+    | 'no_match'
+    | 'recognition_init'
+    | 'recognition_fail'
+    | 'start_recording';
+  message?: string;
 };
 
 export type SpeechEndEvent = {
