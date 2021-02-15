@@ -1,33 +1,44 @@
+![CircleCI branch][circle-ci-badge]
 [![npm][npm]][npm-url]
-[![deps][deps]][deps-url]
 
-# React Native Voice
+<h1 align="center">React Native Voice</h1>
+<p align="center">A speech-to-text library for <a href="https://reactnative.dev/">React Native.</a></p>
 
-A speech-to-text library for [React Native](https://facebook.github.io/react-native/).
+<a href="https://discord.gg/CJHKVeW6sp">
+<img src="https://img.shields.io/discord/764994995098615828?label=Discord&logo=Discord&style=for-the-badge"
+            alt="chat on Discord"></a>
 
 ```sh
-npm i react-native-voice --save
+yarn add @react-native-community/voice
+
+# or
+
+npm i @react-native-community/voice --save
 ```
 
-- [React Native Voice](#react-native-voice)
-  - [Linking](#linking)
-    - [Manually Link Android](#manually-link-android)
-    - [Manually Link iOS](#manually-link-ios)
-  - [Usage](#usage)
-    - [Example](#example)
-  - [API](#api)
-  - [Speech recognition options](#speech-recognition-options)
-  - [Events](#events)
-    - [Handling errors](#handling-errors)
-    - [Android](#android)
-    - [iOS](#ios)
+Link the iOS package
+
+```sh
+npx pod-install
+```
+
+## Table of contents
+
+- [Table of contents](#table-of-contents)
+- [Linking](#linking)
+  - [Manually Link Android](#manually-link-android)
+  - [Manually Link iOS](#manually-link-ios)
+  - [Example](#example)
+  - [Android](#android)
+  - [iOS](#ios)
+  - [Handling errors](#handling-errors)
 
 ## Linking
 
 Manually or automatically link the NativeModule
 
 ```sh
-react-native link react-native-voice
+react-native link @react-native-community/voice
 ```
 
 ### Manually Link Android
@@ -36,8 +47,8 @@ react-native link react-native-voice
 
 ```gradle
 ...
-include ':react-native-voice', ':app'
-project(':react-native-voice').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-voice/android')
+include ':@react-native-community_voice', ':app'
+project(':@react-native-community_voice').projectDir = new File(rootProject.projectDir, '../node_modules/@react-native-community/voice/android')
 ```
 
 - In `android/app/build.gradle`
@@ -46,7 +57,7 @@ project(':react-native-voice').projectDir = new File(rootProject.projectDir, '..
 ...
 dependencies {
     ...
-    compile project(':react-native-voice')
+    compile project(':@react-native-community_voice')
 }
 ```
 
@@ -74,20 +85,19 @@ public class MainActivity extends Activity implements ReactApplication {
 
 ### Manually Link iOS
 
-- Drag the Voice.xcodeproj from the react-native-voice/ios folder to the Libraries group on Xcode in your poject. [Manual linking](https://facebook.github.io/react-native/docs/linking-libraries-ios.html)
+- Drag the Voice.xcodeproj from the @react-native-community/voice/ios folder to the Libraries group on Xcode in your poject. [Manual linking](https://reactnative.dev/docs/linking-libraries-ios.html)
 
 - Click on your main project file (the one that represents the .xcodeproj) select Build Phases and drag the static library, lib.Voice.a, from the Libraries/Voice.xcodeproj/Products folder to Link Binary With Libraries
 
-## Usage
+<h2 align="center">Usage</h2>
 
-[(Outdated) Full example for Android and iOS.](https://github.com/wenkesj/react-native-voice/tree/master/VoiceTest)
+<p align="center"><a href="https://github.com/react-native-community/voice/tree/master/example/src/VoiceTest.js">Full example for Android and iOS.</a></p>
 
 ### Example
 
 ```javascript
-import React, { Component } from "react";
-import { TouchableOpacity, View, Text } from "react-native";
-import Voice from "react-native-voice";
+import Voice from '@react-native-community/voice';
+import React, {Component} from 'react';
 
 class VoiceTest extends Component {
   constructor(props) {
@@ -151,71 +161,109 @@ class VoiceTest extends Component {
 }
 ```
 
-## API
+<h2 align="center">API</h2>
 
-Static access to the Voice API.
+<p align="center">Static access to the Voice API.</p>
 
 **All methods _now_ return a `new Promise` for `async/await` compatibility.**
 
-| Method Name                                                         | Description                                                                                           | Platform     |
-| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------ |
-| Voice.isAvailable()                                                 | Checks whether a speech recognition service is available on the system.                               | Android, iOS |
-| Voice.isReady()                                                     | Checks whether speech recognition is ready to be used.                                                | iOS          |
-| Voice.start(locale: string, options: {})                            | Starts speech recognition. See [Speech recognition options](#speech-recognition-options) for options. | Android, iOS |
-| Voice.stop()                                                        | Stops listening for speech. Returns null if no error occurs.                                          | Android, iOS |
-| Voice.cancel()                                                      | Cancels the speech recognition. Returns null if no error occurs.                                      | Android, iOS |
-| Voice.destroy()                                                     | Destroys the current SpeechRecognizer instance. Returns null if no error occurs.                      | Android, iOS |
-| Voice.removeAllListeners()                                          | Cleans/nullifies overridden `Voice` static methods.                                                   | Android, iOS |
-| Voice.isRecognizing()                                               | Return if the SpeechRecognizer is recognizing.                                                        | Android, iOS |
-| Voice.setCategory(category: string)                                 | Sets the iOS audio category.                                                                          | iOS          |
-| Voice.setPermissionRationaleAndroid(title: string, message: string) | Sets the permission rationale when requesting microphone permissions                                  | Android      |
-| Voice.requestPermissionsAndroid()                                   | Requests permissions to use the microphone. Note: already checked in `Voice.start()`                  | Android      |
+| Method Name                          | Description                                                                                                                                                             | Platform     |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| Voice.isAvailable()                  | Checks whether a speech recognition service is available on the system.                                                                                                 | Android, iOS |
+| Voice.start(locale)                  | Starts listening for speech for a specific locale. Returns null if no error occurs.                                                                                     | Android, iOS |
+| Voice.stop()                         | Stops listening for speech. Returns null if no error occurs.                                                                                                            | Android, iOS |
+| Voice.cancel()                       | Cancels the speech recognition. Returns null if no error occurs.                                                                                                        | Android, iOS |
+| Voice.destroy()                      | Destroys the current SpeechRecognizer instance. Returns null if no error occurs.                                                                                        | Android, iOS |
+| Voice.removeAllListeners()           | Cleans/nullifies overridden `Voice` static methods.                                                                                                                     | Android, iOS |
+| Voice.isRecognizing()                | Return if the SpeechRecognizer is recognizing.                                                                                                                          | Android, iOS |
+| Voice.getSpeechRecognitionServices() | Returns a list of the speech recognition engines available on the device. (Example: `['com.google.android.googlequicksearchbox']` if Google is the only one available.) | Android      |
 
-## Speech recognition options
+<h2 align="center">Events</h2>
 
-Usage: `Voice.start(locale: string, options: {})`
+<p align="center">Callbacks that are invoked when a native event emitted.</p>
 
-| Option Key                                                        | Description                                                                                                                                                                                               | Default                      | Platform |
-| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | -------- |
-| `EXTRA_LANGUAGE_MODEL`: string                                    | Informs the recognizer which speech model to prefer when performing. See [link](https://developer.android.com/reference/android/speech/RecognizerIntent.html#EXTRA_LANGUAGE_MODEL) for additional options | `'LANGUAGE_MODEL_FREE_FORM'` | Android  |
-| `EXTRA_MAX_RESULTS`: number                                       | Optional limit on the maximum number of results to return. If omitted the recognizer will choose how many results to return                                                                               | `5`                          | Android  |
-| `EXTRA_PARTIAL_RESULTS`: boolean                                  | Optional boolean to indicate whether partial results should be returned by the recognizer as the user speaks                                                                                              | `true`                       | Android  |
-| `EXTRA_SPEECH_INPUT_COMPLETE_`<br>`SILENCE_LENGTH_MILLIS`: number | The amount of time that it should take after we stop hearing speech to consider the input complete.                                                                                                       | not set                      | Android  |
-| `EXTRA_SPEECH_INPUT_MINIMUM_`<br>`LENGTH_MILLIS`: number | The minimum length of an utterance                                                           | not set                      | Android  |
-| `continous`: boolean                                              | Enables continuous speech recognition                                                                                                                                                                     | `false`                      | iOS      |
+| Event Name                          | Description                                            | Event                                           | Platform     |
+| ----------------------------------- | ------------------------------------------------------ | ----------------------------------------------- | ------------ |
+| Voice.onSpeechStart(event)          | Invoked when `.start()` is called without error.       | `{ error: false }`                              | Android, iOS |
+| Voice.onSpeechRecognized(event)     | Invoked when speech is recognized.                     | `{ error: false }`                              | Android, iOS |
+| Voice.onSpeechEnd(event)            | Invoked when SpeechRecognizer stops recognition.       | `{ error: false }`                              | Android, iOS |
+| Voice.onSpeechError(event)          | Invoked when an error occurs.                          | `{ error: Description of error as string }`     | Android, iOS |
+| Voice.onSpeechResults(event)        | Invoked when SpeechRecognizer is finished recognizing. | `{ value: [..., 'Speech recognized'] }`         | Android, iOS |
+| Voice.onSpeechPartialResults(event) | Invoked when any results are computed.                 | `{ value: [..., 'Partial speech recognized'] }` | Android, iOS |
+| Voice.onSpeechVolumeChanged(event)  | Invoked when pitch that is recognized changed.         | `{ value: pitch in dB }`                        | Android      |
 
-## Events
+<h2 align="center">Permissions</h2>
 
-Callbacks that are invoked when a native event emitted.
+<p align="center">Arguably the most important part.</p>
 
-| Event Name                          | Description                                            | Event                                | Platform     |
-| ----------------------------------- | ------------------------------------------------------ | ------------------------------------ | ------------ |
-| Voice.onSpeechStart()               | Invoked when `.start()` is called without error.       | `null`                               | Android, iOS |
-| Voice.onSpeechRecognized(event)     | Invoked when speech is recognized.                     | `{ isFinal: boolean }`               | Android, iOS |
-| Voice.onSpeechEnd(event)            | Invoked when SpeechRecognizer stops recognition.       | `{ error?: boolean }`                | Android, iOS |
-| Voice.onSpeechError(event)          | Invoked when an error occurs.                          | `{ code: string, message?: string }` | Android, iOS |
-| Voice.onSpeechResults(event)        | Invoked when SpeechRecognizer is finished recognizing. | `{ value: Array<string> }`           | Android, iOS |
-| Voice.onSpeechPartialResults(event) | Invoked when any results are computed.                 | `{ value: Array<string> }`           | Android, iOS |
-| Voice.onSpeechVolumeChanged(event)  | Invoked when pitch that is recognized changed.         | `{ value: pitch in dB }`             | Android      |
+### Android
+
+While the included `VoiceTest` app works without explicit permissions checks and requests, it may be necessary to add a permission request for `RECORD_AUDIO` for some configurations.
+Since Android M (6.0), [user need to grant permission at runtime (and not during app installation)](https://developer.android.com/training/permissions/requesting.html).
+By default, calling the `startSpeech` method will invoke `RECORD AUDIO` permission popup to the user. This can be disabled by passing `REQUEST_PERMISSIONS_AUTO: true` in the options argument.
+
+If you're running an ejected expo/expokit app, you may run into issues with permissions on Android and get the following error `host.exp.exponent.MainActivity cannot be cast to com.facebook.react.ReactActivity startSpeech`. This can be resolved by prompting for permssion using the `expo-permission` package before starting recognition.
+
+```js
+import { Permissions } from "expo";
+async componentDidMount() {
+	const { status, expires, permissions } = await Permissions.askAsync(
+		Permissions.AUDIO_RECORDING
+	);
+	if (status !== "granted") {
+		//Permissions not granted. Don't show the start recording button because it will cause problems if it's pressed.
+		this.setState({showRecordButton: false});
+	} else {
+		this.setState({showRecordButton: true});
+	}
+}
+```
+
+**Notes on Android**
+
+Even after all the permissions are correct in Android, there is one last thing to make sure this libray is working fine on Android. Please make sure the device has Google Speech Recognizing Engine such as `com.google.android.googlequicksearchbox` by calling `Voice.getSpeechRecognitionServices()`. Since Android phones can be configured with so many options, even if a device has googlequicksearchbox engine, it could be configured to use other services. You can check which serivce is used for Voice Assistive App in following steps for most Android phones:
+
+`Settings > App Management > Default App > Assistive App and Voice Input > Assistive App`
+
+Above flow can vary depending on the Android models and manufactures. For Huawei phones, there might be a chance that the device cannot install Google Services.
+
+**How can I get `com.google.android.googlequicksearchbox` in the device?**
+
+Please ask users to install [Google Search App](https://play.google.com/store/apps/details?id=com.google.android.googlequicksearchbox&hl=en).
+
+### iOS
+
+Need to include permissions for `NSMicrophoneUsageDescription` and `NSSpeechRecognitionUsageDescription` inside Info.plist for iOS. See the included `VoiceTest` for how to handle these cases.
+
+```xml
+<dict>
+  ...
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Description of why you require the use of the microphone</string>
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>Description of why you require the use of the speech recognition</string>
+  ...
+</dict>
+```
+
+Please see the documentation provided by ReactNative for this: [PermissionsAndroid](https://reactnative.dev/docs/permissionsandroid.html)
+
+[npm]: https://img.shields.io/npm/v/@react-native-community/voice.svg?style=flat-square
+[npm-url]: https://npmjs.com/package/@react-native-community/voice
+[circle-ci-badge]: https://img.shields.io/circleci/project/github/react-native-community/voice/master.svg?style=flat-square
 
 ### Handling errors
 
 This applies to `Voice.onSpeechError(e)` and when `await Voice.start()` throws an exception.
 
 ```javascript
-  onSpeechErrorHandler(e) {
-    // e: { code: string, message?: string }
-    // switch (e.code) { ... }
-  }
-
-  ...
-  try {
-    await Voice.start();
-  } catch (e) {
-    // Note: on Android this will *likely* return an Error object.
-    // e: Error | { code: string, message?: string }
-    // switch (e.code) { ... }
-  }
+try {
+  await Voice.start();
+} catch (e) {
+  // Note: on Android this will *likely* return an Error object.
+  // e: Error | { code: string, message?: string }
+  // switch (e.code) { ... }
+}
 ```
 
 | Code               | Description                                                     | Platform     |
@@ -237,49 +285,17 @@ This applies to `Voice.onSpeechError(e)` and when `await Voice.start()` throws a
 | `input`            | Audio engine has no input node                                  | iOS          |
 | `recognition_fail` | General failure while using recognition. Has a `"message"` prop | iOS          |
 
-<h2 align="center">Permissions</h2>
+<h2 align="center">Contributors</h2>
 
-<p align="center">Arguably the most important part.</p>
-
-### Android
-
-While the included `VoiceTest` app works without explicit permissions checks and requests, it may be necessary to add a permission request for `RECORD_AUDIO` for some configurations.
-Since Android M (6.0), [user need to grant permission at runtime (and not during app installation)](https://developer.android.com/training/permissions/requesting.html).
-By default, calling the `startSpeech` method will invoke `RECORD AUDIO` permission popup to the user. This can be disabled by passing `REQUEST_PERMISSIONS_AUTO: true` in the options argument.
-
-### iOS
-
-Need to include permissions for `NSMicrophoneUsageDescription` and `NSSpeechRecognitionUsageDescription` inside Info.plist for iOS. See the included `VoiceTest` for how to handle these cases.
-
-```xml
-<dict>
-  ...
-  <key>NSMicrophoneUsageDescription</key>
-  <string>Description of why you require the use of the microphone</string>
-  <key>NSSpeechRecognitionUsageDescription</key>
-  <string>Description of why you require the use of the speech recognition</string>
-  ...
-</dict>
-```
-
-Please see the documentation provided by ReactNative for this: [PermissionsAndroid](http://facebook.github.io/react-native/docs/permissionsandroid.html)
-
-[npm]: https://img.shields.io/npm/v/react-native-voice.svg
-[npm-url]: https://npmjs.com/package/react-native-voice
-[deps]: https://david-dm.org/wenkesj/react-native-voice.svg
-[deps-url]: https://david-dm.org/wenkesj/react-native-voice.svg
-
-<h2 align="center">Contibutors</h2>
-
-* @asafron
-* @BrendanFDMoore
-* @brudny
-* @chitezh
-* @ifsnow
-* @jamsch
-* @misino
-* @Noitidart
-* @ohtangza & @hayanmind
-* @rudiedev6
-* @tdonia
-* @wenkesj
+- @asafron
+- @BrendanFDMoore
+- @brudny
+- @chitezh
+- @ifsnow
+- @jamsch
+- @misino
+- @Noitidart
+- @ohtangza & @hayanmind
+- @rudiedev6
+- @tdonia
+- @wenkesj
