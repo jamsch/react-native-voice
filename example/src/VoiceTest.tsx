@@ -158,9 +158,8 @@ class VoiceTest extends Component<Props, State> {
           Press the button and start speaking.
         </Text>
         <Text style={styles.stat}>{`Started: ${this.state.started}`}</Text>
-        <Text style={styles.stat}>{`Recognized: ${
-          this.state.recognized
-        }`}</Text>
+        <Text
+          style={styles.stat}>{`Recognized: ${this.state.recognized}`}</Text>
         <Text style={styles.stat}>{`Pitch: ${this.state.pitch}`}</Text>
         <Text style={styles.stat}>{`Error: ${this.state.error}`}</Text>
         <Text style={styles.stat}>Results</Text>

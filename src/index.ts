@@ -1,4 +1,4 @@
-import { NativeModules, NativeEventEmitter, Platform, PermissionsAndroid, Rationale } from 'react-native';
+import { NativeModules, NativeEventEmitter, Platform } from 'react-native';
 
 import invariant from 'invariant';
 
@@ -23,12 +23,6 @@ class RCTVoice {
   _loaded: boolean;
   _listeners: any[] | null;
   _events: Required<SpeechEvents>;
-
-  rationale: Rationale = {
-    title: 'Microphone Permission',
-    message: 'This app would like access to use your microphone.',
-    buttonPositive: 'Accept',
-  };
 
   constructor() {
     this._loaded = false;
@@ -73,23 +67,6 @@ class RCTVoice {
   }
 
   /**
-   * Requests permissions to use the microphone.
-   * Returns true if the user provided permissions
-   */
-  async requestPermissionsAndroid() {
-    if (Platform.OS !== 'android') {
-      return true;
-    }
-
-    const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO, this.rationale);
-
-    if (result !== 'granted') {
-      throw { code: 'permissions' };
-    }
-    return true;
-  }
-
-  /**
    * Starts speech recognition
    * @param {string} locale Locale string
    * @param {object} options (Android) Additional options for speech recognition
@@ -105,16 +82,6 @@ class RCTVoice {
       case 'ios':
         return Voice.startSpeech(locale);
       case 'android':
-        // Returns "true" if the user already has permissions
-        // throws { code: 'permissions' } if user denies permissions
-        await this.requestPermissionsAndroid();
-
-        // Checks whether speech recognition is available on the device
-        const isAvailable = await this.isAvailable();
-        if (!isAvailable) {
-          throw { code: 'not_available' };
-        }
-
         // Start speech recognition
         const speechOptions = {
           EXTRA_LANGUAGE_MODEL: 'LANGUAGE_MODEL_FREE_FORM',

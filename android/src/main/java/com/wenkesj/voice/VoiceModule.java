@@ -148,28 +148,47 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
     return "RCTVoice";
   }
 
+  private final int RECORD_AUDIO_PERMISSIONS = 1;
+
   @ReactMethod
   public void startSpeech(final String locale, final ReadableMap opts, final Promise promise) {
-    if (!isPermissionGranted() && opts.getBoolean("REQUEST_PERMISSIONS_AUTO")) {
-      String[] PERMISSIONS = {Manifest.permission.RECORD_AUDIO};
-      if (this.getCurrentActivity() != null) {
-        ((PermissionAwareActivity) this.getCurrentActivity()).requestPermissions(PERMISSIONS, 1, new PermissionListener() {
-          public boolean onRequestPermissionsResult(final int requestCode,
-                                                    @NonNull final String[] permissions,
-                                                    @NonNull final int[] grantResults) {
-            boolean permissionsGranted = true;
-            for (int i = 0; i < permissions.length; i++) {
-              final boolean granted = grantResults[i] == PackageManager.PERMISSION_GRANTED;
-              permissionsGranted = permissionsGranted && granted;
-            }
-            startSpeechWithPermissions(locale, opts, promise);
-            return permissionsGranted;
-          }
-        });
-      }
+    // Check whether speech recognition is available
+    if (!hasSpeechServices()) {
+       promise.reject("not_available", "Speech Recognition is not available on this device");
+       return;
+    }
+
+    if (isPermissionGranted()) {
+      startSpeechWithPermissions(locale, opts, promise);
       return;
     }
-    startSpeechWithPermissions(locale, opts, promise);
+    // User opted out of asking for permissions (or activity is falsy)
+    if (!opts.getBoolean("REQUEST_PERMISSIONS_AUTO") || this.getCurrentActivity() == null) {
+      promise.reject("permissions", "User needs to accept record audio permissions");
+      return;
+    }
+
+    String[] PERMISSIONS = {Manifest.permission.RECORD_AUDIO};
+
+    ((PermissionAwareActivity) this.getCurrentActivity()).requestPermissions(PERMISSIONS, RECORD_AUDIO_PERMISSIONS, new PermissionListener() {
+      public boolean onRequestPermissionsResult(final int requestCode,
+                                                @NonNull final String[] permissions,
+                                                @NonNull final int[] grantResults) {
+        switch (requestCode) {
+          case RECORD_AUDIO_PERMISSIONS: {
+            Boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            if (granted) {
+                startSpeechWithPermissions(locale, opts, promise);
+            } else {
+              promise.reject("permissions", "User needs to accept record audio permissions");
+            }
+            return granted;
+          }
+          default:
+            return false;
+        }
+      }
+    });
   }
 
   @ReactMethod
@@ -230,6 +249,21 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
     });
   }
 
+  private Boolean hasSpeechServices() {
+    try {
+      Boolean isSpeechAvailable = SpeechRecognizer.isRecognitionAvailable(this.reactContext);
+      if (!isSpeechAvailable) {
+        return false;
+      }
+      // Some devices seem to report "true" on "isRecognitionAvailable" while having no intent services.
+      final List<ResolveInfo> services = this.reactContext.getPackageManager()
+        .queryIntentServices(new Intent(RecognitionService.SERVICE_INTERFACE), 0);
+      return (services.size() > 0);
+    } catch(Exception e) {
+      return false;
+    }
+  }
+
   @ReactMethod
   public void isSpeechAvailable(final Promise promise) {
     final VoiceModule self = this;
@@ -237,12 +271,7 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
     mainHandler.post(new Runnable() {
       @Override
       public void run() {
-        try {
-          Boolean isSpeechAvailable = SpeechRecognizer.isRecognitionAvailable(self.reactContext);
-          promise.resolve(isSpeechAvailable);
-        } catch(Exception e) {
-          promise.resolve(false);
-        }
+        promise.resolve(hasSpeechServices());
       }
     });
   }
