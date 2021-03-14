@@ -160,35 +160,34 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
 
     if (isPermissionGranted()) {
       startSpeechWithPermissions(locale, opts, promise);
-      return;
-    }
-    // User opted out of asking for permissions (or activity is falsy)
-    if (!opts.getBoolean("REQUEST_PERMISSIONS_AUTO") || this.getCurrentActivity() == null) {
-      promise.reject("permissions", "User needs to accept record audio permissions");
-      return;
-    }
-
-    String[] PERMISSIONS = {Manifest.permission.RECORD_AUDIO};
-
-    ((PermissionAwareActivity) this.getCurrentActivity()).requestPermissions(PERMISSIONS, RECORD_AUDIO_PERMISSIONS, new PermissionListener() {
-      public boolean onRequestPermissionsResult(final int requestCode,
-                                                @NonNull final String[] permissions,
-                                                @NonNull final int[] grantResults) {
-        switch (requestCode) {
-          case RECORD_AUDIO_PERMISSIONS: {
-            Boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
-            if (granted) {
-                startSpeechWithPermissions(locale, opts, promise);
-            } else {
-              promise.reject("permissions", "User needs to accept record audio permissions");
-            }
-            return granted;
-          }
-          default:
-            return false;
-        }
+    } else {
+      // User opted out of asking for permissions (or activity is falsy)
+      if (!opts.getBoolean("REQUEST_PERMISSIONS_AUTO") || this.getCurrentActivity() == null) {
+        promise.reject("permissions", "User needs to accept record audio permissions");
+        return;
       }
-    });
+
+      String[] PERMISSIONS = {Manifest.permission.RECORD_AUDIO};
+
+      ((PermissionAwareActivity) this.getCurrentActivity()).requestPermissions(PERMISSIONS, RECORD_AUDIO_PERMISSIONS, new PermissionListener() {
+        public boolean onRequestPermissionsResult(final int requestCode,
+                                                  @NonNull final String[] permissions,
+                                                  @NonNull final int[] grantResults) {
+
+          boolean permissionsGranted = true;
+          for (int i = 0; i < permissions.length; i++) {
+            final boolean granted = grantResults[i] == PackageManager.PERMISSION_GRANTED;
+            permissionsGranted = permissionsGranted && granted;
+          }
+          if (permissionsGranted) {
+            startSpeechWithPermissions(locale, opts, promise);
+          } else {
+            promise.reject("permissions", "User needs to accept record audio permissions");
+          }
+          return permissionsGranted;
+        }
+      });
+    }
   }
 
   @ReactMethod
@@ -249,9 +248,9 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
     });
   }
 
-  private Boolean hasSpeechServices() {
+  private boolean hasSpeechServices() {
     try {
-      Boolean isSpeechAvailable = SpeechRecognizer.isRecognitionAvailable(this.reactContext);
+      boolean isSpeechAvailable = SpeechRecognizer.isRecognitionAvailable(this.reactContext);
       if (!isSpeechAvailable) {
         return false;
       }
@@ -326,12 +325,11 @@ public class VoiceModule extends ReactContextBaseJavaModule implements Recogniti
 
   @Override
   public void onError(int errorCode) {
-    String errorMessage = String.format("%d/%s", errorCode, getErrorText(errorCode));
-    WritableMap error = Arguments.createMap();
-    error.putString("message", errorMessage);
-    error.putString("code", String.valueOf(errorCode));
-    sendEvent("onSpeechError", error);
-    Log.d("ASR", "onError() - " + errorMessage);
+    String errorCodeText = getErrorText(errorCode);
+    WritableMap event = Arguments.createMap();
+    event.putString("code", errorCodeText);
+    sendEvent("onSpeechError", event);
+    Log.d("ASR", "onError() - " + errorCodeText);
   }
 
   @Override
