@@ -15,5 +15,5 @@ Pod::Spec.new do |s|
   s.source       = { :git => "https://github.com/jamsch/react-native-voice.git", :branch => "npm-package" }
   s.source_files  = "ios/**/*.{h,m}"
 
-  s.dependency 'React'
+  s.dependency 'React-Core'
 end
