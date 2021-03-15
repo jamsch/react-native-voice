@@ -335,7 +335,7 @@
 }
 
 // Called when the availability of the given recognizer changes
-- (void)speechRecognizer:(SFSpeechRecognizer *)speechRecognizer availabilityDidChange:(BOOL)available {
+- (void)speechRecognizer:(SFSpeechRecognizer *)speechRecognizer availabilityDidChange:(BOOL)available  API_AVAILABLE(ios(10.0)){
     if (available == false) {
         [self sendResult:@{@"code": @"not_available"} :nil :nil :nil];
     }
@@ -359,15 +359,19 @@ RCT_EXPORT_METHOD(destroySpeech:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
 }
 
 RCT_EXPORT_METHOD(isSpeechAvailable:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
-    [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
-        switch (status) {
-            case SFSpeechRecognizerAuthorizationStatusAuthorized:
-                resolve(@true);
-                break;
-            default:
-                resolve(@false);
-        }
-    }];
+    if (@available(iOS 10.0, *)) {
+        [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
+            switch (status) {
+                case SFSpeechRecognizerAuthorizationStatusAuthorized:
+                    resolve(@true);
+                    break;
+                default:
+                    resolve(@false);
+            }
+        }];
+    } else {
+        resolve(@false);
+    }
 }
 
 RCT_EXPORT_METHOD(isRecognizing:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
@@ -389,7 +393,7 @@ RCT_EXPORT_METHOD(isReady:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRe
         resolve(@NO);
         return;
     }
-    resolve(@YES)
+    resolve(@YES);
 }
 
 RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
@@ -407,23 +411,28 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
         return;
     };
     
-    [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
-        switch (status) {
-            case SFSpeechRecognizerAuthorizationStatusNotDetermined:
-                reject(@"not_authorized", @"Speech recognition is not authorized", nil);
-                return;
-            case SFSpeechRecognizerAuthorizationStatusDenied:
-                reject(@"permissions", @"User denied permission to use speech recognition", nil);
-                return;
-            case SFSpeechRecognizerAuthorizationStatusRestricted:
-                reject(@"restricted", @"Speech recognition restricted on this device", nil);
-                return;
-            case SFSpeechRecognizerAuthorizationStatusAuthorized:
-                [self setupAndStartRecognizing:localeStr];
-                resolve(nil);
-                return;
-        }
-    }];
+    if (@available(iOS 10.0, *)) {
+        [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
+            switch (status) {
+                case SFSpeechRecognizerAuthorizationStatusNotDetermined:
+                    reject(@"not_authorized", @"Speech recognition is not authorized", nil);
+                    return;
+                case SFSpeechRecognizerAuthorizationStatusDenied:
+                    reject(@"permissions", @"User denied permission to use speech recognition", nil);
+                    return;
+                case SFSpeechRecognizerAuthorizationStatusRestricted:
+                    reject(@"restricted", @"Speech recognition restricted on this device", nil);
+                    return;
+                case SFSpeechRecognizerAuthorizationStatusAuthorized:
+                    [self setupAndStartRecognizing:localeStr];
+                    resolve(nil);
+                    return;
+            }
+        }];
+    } else {
+        // Fallback on earlier versions
+        reject(@"not_available", @"Speech recognition is not available on this device", nil);
+    }
 }
 
 
