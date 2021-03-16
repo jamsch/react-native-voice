@@ -219,6 +219,8 @@
         for (SFTranscription* transcription in result.transcriptions) {
             [transcriptionDics addObject:transcription.formattedString];
         }
+
+        [self sendResult :nil :result.bestTranscription.formattedString :transcriptionDics :[NSNumber numberWithBool:isFinal]];
         
         // Finish speech recognition
         if (isFinal || !self.recognitionTask || self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
