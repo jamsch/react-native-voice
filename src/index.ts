@@ -80,7 +80,7 @@ class RCTVoice {
 
     switch (Platform.OS) {
       case 'ios':
-        return Voice.startSpeech(locale);
+        return Voice.startSpeech(locale, {});
       case 'android':
         // Start speech recognition
         const speechOptions = {
