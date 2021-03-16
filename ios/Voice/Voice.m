@@ -322,16 +322,21 @@
 }
 
 - (void) sendResult:(NSDictionary*)error :(NSString*)bestTranscription :(NSArray*)transcriptions :(NSNumber*)isFinal {
-    if (error != nil) {
+    if (error) {
         [self sendEventWithName:@"onSpeechError" body:error];
+        return;
     }
-    if (bestTranscription != nil) {
-        [self sendEventWithName:@"onSpeechResults" body:@{@"value":@[bestTranscription]} ];
+    if (bestTranscription) {
+        if ([isFinal boolValue]) {
+            [self sendEventWithName:@"onSpeechResults" body:@{@"value":@[bestTranscription]} ];
+        } else {
+            [self sendEventWithName:@"onSpeechPartialResults" body:@{@"value":transcriptions} ];
+        }
+    } else if (transcriptions) {
+        [self sendEventWithName:@"onSpeechPartialResults" body:@{@"value":transcriptions} ];
     }
-    if (transcriptions != nil) {
-        [self sendEventWithName:@"onSpeechPartialResults" body:@{@"value":transcriptions}];
-    }
-    if (isFinal != nil) {
+    
+    if ([isFinal boolValue]) {
         [self sendEventWithName:@"onSpeechRecognized" body: @{@"isFinal": isFinal}];
     }
 }
