@@ -1,12 +1,12 @@
-![CircleCI branch][circle-ci-badge]
-[![npm][npm]][npm-url]
+# Warning: This fork is no longer maintained
+
+Please use one of the following libraries instead:
+
+- [react-native-voice](https://github.com/react-native-voice/voice)
+- [expo-speech-recognition](https://github.com/jamsch/expo-speech-recognition)
 
 <h1 align="center">React Native Voice</h1>
 <p align="center">A speech-to-text library for <a href="https://reactnative.dev/">React Native.</a></p>
-
-<a href="https://discord.gg/CJHKVeW6sp">
-<img src="https://img.shields.io/discord/764994995098615828?label=Discord&logo=Discord&style=for-the-badge"
-            alt="chat on Discord"></a>
 
 ```sh
 yarn add @react-native-voice/voice
